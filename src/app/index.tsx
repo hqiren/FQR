@@ -3,6 +3,9 @@ import { PieChart } from 'react-native-gifted-charts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Checkbox } from 'expo-checkbox';
+import { createContext, useContext, useState } from 'react';
+import { router } from 'expo-router';
+import { useToDo } from '../context/ToDoContext';
 
 const chartConfig = {
   backgroundGradientFrom: "#1E2923",
@@ -17,10 +20,34 @@ const chartConfig = {
 
 const screenWidth = Dimensions.get("window").width;
 const screenLength = Dimensions.get("window").height;
+const today = new Date().toLocaleDateString('en-US', {
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+});
 
-// Time Spent Data
-const mockData = [{value: 30, text: 'Facebook'}, {value: 45, text: 'Instagram'}, {value: 50, text: 'Reddit'
-}, {value: 20, text: 'Mobile Legends'}];
+type ToDoType = {
+  id: number;
+  task: string;
+  isDone: boolean;
+};
+
+const palette = [
+  '#1877F2', '#E1306C', '#FF4500', '#FFD700',
+  '#00C49F', '#A855F7', '#FF6B6B', '#43AA8B'
+];
+
+// Pie Chart data
+const mockData = [
+  { value: 30, text: 'Facebook' },
+  { value: 45, text: 'Instagram' },
+  { value: 50, text: 'Reddit' },
+  { value: 20, text: 'Mobile Legends' },
+].map((item, index) => ({
+  ...item,
+  color: palette[index % palette.length]
+}));
 
 // To Do List data
 const toDoList = [
@@ -52,7 +79,8 @@ const styles = StyleSheet.create({
     fontFamily: 'Georgia',
     textAlign: 'center'
   },
-  otherText: {
+  date: {
+    marginBottom: 5,
     fontFamily: 'Georgia',
     textAlign: 'center',
     fontSize: 16
@@ -71,27 +99,34 @@ const styles = StyleSheet.create({
   },
   toDoInfoContainer: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 4,
     alignItems: 'center',
+  },
+  addButton: {
+    flexDirection: 'row', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    paddingVertical: 8
   },
   qotd: {
     fontFamily: 'Copperplate',
     fontSize: 18,
     textAlign: 'center',
-    marginBottom: 25
   },
   menuButton: {
-    justifyContent: 'flex-end'
+    justifyContent: 'flex-start'
   }
 }
 )
 
 export default function HomeScreen() {
+  const { toDoData } = useToDo();
+
   return (
     <SafeAreaView style={styles.container}>
       {/* Header Text above Pie Chart */}
       <Text style={styles.headerText}>Today's Screen Time</Text>
-      <Text style={styles.otherText}>Date</Text>
+      <Text style={styles.date}>{today}</Text>
 
       {/* Pie Chart */}
       <View style={styles.pieChart}>
@@ -104,18 +139,25 @@ export default function HomeScreen() {
       </View>
 
       {/* Legend */}
-        <View style={styles.legend}>
-          {mockData.map((item) => (
-            <View key={item.text} style={{ flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-              <View style={{ width: 12, height: 12, borderRadius: 6}} />
-              <Text>{item.text}: {item.value}h</Text>
-            </View>
-          ))}
-        </View>
+      <View style={styles.legend}>
+        {mockData.map((item) => (
+        <View key={item.text} style={{ flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+          <View style={{ width: 12, height: 12, borderRadius: 6}} />
+            <Text>{item.text}: {item.value}h</Text>
+          </View>
+        ))}
+      </View>
 
       {/* To Do List */}
+      <View style={{flex: 1, flexDirection: 'column'}}>
+        <View style={styles.addButton}>
+          <Text>Upcoming Activities</Text>
+          <TouchableOpacity onPress={() => router.push('/goals')}>
+            <Ionicons name='add-circle-outline' size={24} color='black' />
+          </TouchableOpacity>
+        </View>
       <FlatList 
-        data ={toDoList} 
+        data={toDoData.slice(0, 3)}
         keyExtractor={(item) => item.id.toString()}
         renderItem={({item}) => 
           <View style={styles.toDoContainer}>
@@ -128,6 +170,7 @@ export default function HomeScreen() {
           </View>
         }
         />
+        </View>
 
       {/* Quote of the Day */}
       <Text style={styles.qotd}>QOTD</Text>
@@ -139,6 +182,7 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
       
+
     </SafeAreaView>
   );
 }

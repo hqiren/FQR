@@ -1,5 +1,10 @@
-import { Stack } from "expo-router";
+import { Stack } from 'expo-router';
+import { ToDoProvider } from '../context/ToDoContext';
 
 export default function RootLayout() {
-  return <Stack screenOptions={{headerShown: false}} />;
+  return (
+    <ToDoProvider>
+      <Stack screenOptions={{ headerShown: false }} />
+    </ToDoProvider>
+  );
 }
