@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
 })
 
 export default function GoalsScreen() {
-  const { toDoData, addTask, removeTask } = useToDo();
+  const { toDoData, addTask, removeTask, handleDone } = useToDo();
   const [inputText, setInputText] = useState('');
 
   return (
@@ -74,7 +74,7 @@ export default function GoalsScreen() {
           <View style={styles.toDoContainer}>
             <View style={styles.toDoInfoContainer}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Checkbox value={item.isDone} />
+                <Checkbox value={item.isDone} onValueChange={() => handleDone(item.id)}/>
                 <Text style={item.isDone ? { textDecorationLine: 'line-through' } : {}}>
                 {item.task}
                 </Text >

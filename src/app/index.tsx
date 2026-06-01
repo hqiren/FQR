@@ -3,7 +3,6 @@ import { PieChart } from 'react-native-gifted-charts';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Checkbox } from 'expo-checkbox';
-import { createContext, useContext, useState } from 'react';
 import { router } from 'expo-router';
 import { useToDo } from '../context/ToDoContext';
 
@@ -49,29 +48,12 @@ const mockData = [
   color: palette[index % palette.length]
 }));
 
-// To Do List data
-const toDoList = [
-  {
-    id: 1,
-    task: "Task 1",
-    isDone: true
-  },
-  {
-    id: 2,
-    task: "Task 2",
-    isDone: false
-  },
-  {
-    id: 3,
-    task: "Task 3",
-    isDone: false
-  }
-]
-
 // Styles
 const styles = StyleSheet.create({
   container: {
-    flex: 1
+    flex: 1,
+    flexDirection: 'column',
+    justifyContent: 'space-between'
   },
   headerText: {
     fontWeight: 'bold',
@@ -148,6 +130,7 @@ export default function HomeScreen() {
         ))}
       </View>
 
+      <View style={{ flex: 1, justifyContent: 'space-evenly' }}>
       {/* To Do List */}
       <View style={{flex: 1, flexDirection: 'column'}}>
         <View style={styles.addButton}>
@@ -174,6 +157,7 @@ export default function HomeScreen() {
 
       {/* Quote of the Day */}
       <Text style={styles.qotd}>QOTD</Text>
+      </View>
 
       {/* Menu Button */}
       <View style={styles.menuButton}>

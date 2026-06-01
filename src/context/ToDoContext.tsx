@@ -11,6 +11,7 @@ const ToDoContext = createContext<{
   toDoData: ToDoType[],
   addTask: (task: string) => void,
   removeTask: (id: number) => void
+  handleDone: (id: number) => void
 } | null>(null);
 
 export function ToDoProvider({ children }: { children: React.ReactNode }) {
@@ -44,8 +45,18 @@ export function ToDoProvider({ children }: { children: React.ReactNode }) {
     setToDo(newList);
   };
 
+  const handleDone = (id: number) => {
+    const newList = toDoData.map(todo => {
+        if (todo.id == id) {
+            todo.isDone = !todo.isDone;
+        }
+        return todo;
+  });
+    setToDo(newList);
+  }
+
   return (
-    <ToDoContext.Provider value={{ toDoData, addTask, removeTask }}>
+    <ToDoContext.Provider value={{ toDoData, addTask, removeTask, handleDone }}>
       {children}
     </ToDoContext.Provider>
   );
