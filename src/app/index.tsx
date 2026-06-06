@@ -1,22 +1,34 @@
-import { Text, View, Dimensions, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
-import { PieChart } from 'react-native-gifted-charts';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Checkbox } from 'expo-checkbox';
-import { router } from 'expo-router';
-import { useToDo } from '../context/ToDoContext';
-import { useScreenTime } from '@/context/ScreenTime';
+import { useScreenTime } from "@/context/ScreenTime";
+import { Ionicons } from "@expo/vector-icons";
+import { Checkbox } from "expo-checkbox";
+import { router } from "expo-router";
+import {
+  FlatList,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { PieChart } from "react-native-gifted-charts";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useToDo } from "../context/ToDoContext";
 
-const today = new Date().toLocaleDateString('en-US', {
-  weekday: 'long',
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric'
+const today = new Date().toLocaleDateString("en-US", {
+  weekday: "long",
+  year: "numeric",
+  month: "long",
+  day: "numeric",
 });
 
 const palette = [
-  '#1877F2', '#E1306C', '#FF4500', '#FFD700',
-  '#00C49F', '#A855F7', '#FF6B6B', '#43AA8B'
+  "#1877F2",
+  "#E1306C",
+  "#FF4500",
+  "#FFD700",
+  "#00C49F",
+  "#A855F7",
+  "#FF6B6B",
+  "#43AA8B",
 ];
 
 const quotes = [
@@ -38,72 +50,71 @@ type ToDoType = {
 };
 
 type ScreenTimeType = {
-  id: number,
-  time: number,
-  app: string,
-}
+  id: number;
+  time: number;
+  app: string;
+};
 
 // Styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'column',
-    justifyContent: 'space-between'
+    flexDirection: "column",
+    justifyContent: "space-between",
   },
   headerText: {
-    fontWeight: 'bold',
+    fontWeight: "bold",
     fontSize: 20,
-    fontFamily: 'Georgia',
-    textAlign: 'center'
+    fontFamily: "Georgia",
+    textAlign: "center",
   },
   date: {
     marginBottom: 5,
-    fontFamily: 'Georgia',
-    textAlign: 'center',
-    fontSize: 16
+    fontFamily: "Georgia",
+    textAlign: "center",
+    fontSize: 16,
   },
   pieChart: {
-    alignItems: 'center'
+    alignItems: "center",
   },
   legend: {
-    marginBottom: 10
+    marginBottom: 10,
   },
   toDoContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     padding: 16,
     borderRadius: 16,
     marginBottom: 10,
   },
   toDoInfoContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 4,
-    alignItems: 'center',
+    alignItems: "center",
   },
   addButton: {
-    flexDirection: 'row', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    paddingVertical: 8
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 8,
   },
   qotd: {
-    fontFamily: 'Copperplate',
+    fontFamily: "Copperplate",
     fontSize: 12,
-    textAlign: 'center',
+    textAlign: "center",
   },
-  menuButton: {
-    justifyContent: 'flex-start'
-  }
-}
-)
+  //menuButton: {
+  //justifyContent: 'flex-start'
+  //}
+});
 
 export default function HomeScreen() {
   const { toDoData } = useToDo();
   const { screenTimeData } = useScreenTime();
 
   const chartData = screenTimeData.map((item, index) => ({
-  value: item.time,
-  text: item.app,
-  color: palette[index % palette.length]
+    value: item.time,
+    text: item.app,
+    color: palette[index % palette.length],
   }));
 
   return (
@@ -112,70 +123,68 @@ export default function HomeScreen() {
       <Text style={styles.headerText}>Today's Screen Time</Text>
       <Text style={styles.date}>{today}</Text>
 
-        {/* Pie Chart */}
-        <View style={styles.pieChart}>
-          <TouchableOpacity onPress={() => router.push('/screentime')}>
-            <View pointerEvents="none">
-              <PieChart
-                radius={150}
-                textSize={20}
-                data={chartData}
-                showValuesAsLabels
-              />
-            </View>
-          </TouchableOpacity>
-        </View>
+      {/* Pie Chart */}
+      <View style={styles.pieChart}>
+        <TouchableOpacity onPress={() => router.push("/screentime")}>
+          <View pointerEvents="none">
+            <PieChart
+              radius={150}
+              textSize={20}
+              data={chartData}
+              showValuesAsLabels
+            />
+          </View>
+        </TouchableOpacity>
+      </View>
 
       {/* Legend */}
       <View style={styles.legend}>
         {chartData.map((item) => (
-        <View key={item.text} style={{ flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-          <View style={{ width: 12, height: 12, borderRadius: 6}} />
-            <Text>{item.text}: {item.value}h</Text>
+          <View
+            key={item.text}
+            style={{ flexDirection: "column", alignItems: "center", gap: 2 }}
+          >
+            <View style={{ width: 12, height: 12, borderRadius: 6 }} />
+            <Text>
+              {item.text}: {item.value}h
+            </Text>
           </View>
         ))}
       </View>
 
       {/* Everything below legend */}
-      <View style={{ flex: 1, justifyContent: 'space-between' }}>
-        
+      <View style={{ flex: 1, justifyContent: "space-between" }}>
         {/* To Do List */}
         <View>
           <View style={styles.addButton}>
             <Text>Upcoming Activities</Text>
-            <TouchableOpacity onPress={() => router.push('/goals')}>
-              <Ionicons name='add-circle-outline' size={24} color='black' />
+            <TouchableOpacity onPress={() => router.push("/goals")}>
+              <Ionicons name="add-circle-outline" size={24} color="black" />
             </TouchableOpacity>
           </View>
-          <FlatList 
+          <FlatList
             data={toDoData.slice(0, 3)}
             keyExtractor={(item) => item.id.toString()}
-            renderItem={({item}) => 
+            renderItem={({ item }) => (
               <View style={styles.toDoContainer}>
                 <View style={styles.toDoInfoContainer}>
                   <Checkbox value={item.isDone} />
-                  <Text style={item.isDone ? { textDecorationLine: "line-through" } : {}}>
+                  <Text
+                    style={
+                      item.isDone ? { textDecorationLine: "line-through" } : {}
+                    }
+                  >
                     {item.task}
                   </Text>
                 </View>
               </View>
-            }
+            )}
           />
         </View>
 
         {/* Quote of the Day */}
         <Text style={styles.qotd}>{qotd}</Text>
-
-        {/* Menu Button */}
-        <View style={styles.menuButton}>
-          <TouchableOpacity onPress={() => alert("Clicked!")}>
-            <Ionicons name='menu' size={40} color='black' />
-          </TouchableOpacity>
-        </View>
-
       </View>
-      
-
     </SafeAreaView>
   );
 }
