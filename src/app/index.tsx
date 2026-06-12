@@ -98,8 +98,8 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   qotd: {
-    fontFamily: "Copperplate",
-    fontSize: 12,
+    fontFamily: "Cinzel",
+    fontSize: 15,
     textAlign: "center",
   },
   //menuButton: {

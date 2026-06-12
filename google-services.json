@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "35215462853",
+    "project_id": "fqrproject",
+    "storage_bucket": "fqrproject.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:35215462853:android:a1b76e322f073c0dea7bac",
+        "android_client_info": {
+          "package_name": "com.yourname.fqr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBdN5nfkjSH75z-UZdeQODms3w25YUylF0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

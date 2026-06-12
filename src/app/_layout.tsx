@@ -24,7 +24,13 @@ export default function RootLayout() {
             name="screentime"
             options={{
               title: "Screen Time",
-              href: null,
+              tabBarIcon: ({ color, size }) => (
+                <MaterialCommunityIcons
+                  name="timer"
+                  size={size}
+                  color={color}
+                />
+              ),
             }}
           />
           <Tabs.Screen
