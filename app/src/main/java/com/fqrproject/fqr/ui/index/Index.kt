@@ -1,0 +1,213 @@
+package com.fqrproject.fqr.ui.index
+
+import android.R.attr.textSize
+import android.graphics.Paint
+import androidx.compose.animation.animateBounds
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import com.fqrproject.fqr.ui.goals.GoalsViewModel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import kotlin.math.cos
+import kotlin.math.sin
+
+data class PieSlice(
+    val label: String,
+    val value: Float,
+    val color: Color
+)
+
+@Composable
+fun PieChart(
+    slices: List<PieSlice>,
+    modifier: Modifier = Modifier
+) {
+    val total = slices.sumOf { it.value.toDouble() }.toFloat()
+
+    Canvas(modifier = modifier) {
+        var startAngle = -90f // start at 12 o'clock instead of 3 o'clock
+
+        slices.forEach { slice ->
+            val sweep = (slice.value / total) * 360f
+            val midAngle = startAngle + (sweep / 2f)
+            val midAngleRad = Math.toRadians(midAngle.toDouble())
+            val xcenter = size.width / 2f
+            val ycenter = size.height / 2f
+            val radius = (minOf(size.width, size.height) / 2f) * 0.65f
+            val xcoord = xcenter + radius * cos(midAngleRad.toFloat())
+            val ycoord = ycenter + radius * sin(midAngleRad.toFloat())
+            val paint = Paint().apply {
+                color = Color.Black.toArgb()
+                textSize = 12.dp.toPx()
+                textAlign = Paint.Align.CENTER
+            }
+
+
+            drawArc(
+                color = slice.color,
+                startAngle = startAngle,
+                sweepAngle = sweep,
+                useCenter = true,
+                size = Size(size.width, size.height)
+            )
+
+            drawContext.canvas.nativeCanvas.drawText(slice.label, xcoord, ycoord, paint)
+
+            startAngle += sweep
+        }
+    }
+}
+
+@Composable
+fun PieChartLegend(slices: List<PieSlice>) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier.width(IntrinsicSize.Max),
+            horizontalAlignment = Alignment.Start
+        ) {
+            slices.forEach { slice ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .background(slice.color)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(slice.label + ": " + slice.value)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun IndexScreen(navController: NavController, goalsModel: GoalsViewModel) {
+    val slices = listOf(
+        PieSlice("Social Media", 120f, Color(0xFFE57373)),
+        PieSlice("Productivity", 90f, Color(0xFF81C784)),
+        PieSlice("Entertainment", 150f, Color(0xFF64B5F6)),
+        PieSlice("Other", 120f, Color(0xFFFFD54F))
+    )
+    val goals = goalsModel.goals
+    val firstThreeGoals = goals.filter { goal -> !goal.isDone }.take(3)
+    val today = java.time.LocalDate.now()
+    val formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy")
+    val formattedDate = today.format(formatter)
+
+    Column(modifier = Modifier
+        .safeDrawingPadding()
+        .fillMaxWidth()) {
+        Text(text = formattedDate,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally),
+            textAlign = TextAlign.Center,
+            fontFamily = FontFamily.Serif)
+        Text(text = "Today's Screentime",
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally),
+            textAlign = TextAlign.Center,
+            fontFamily = FontFamily.Serif)
+        PieChart(
+            slices = slices,
+            modifier = Modifier
+                .size(200.dp)
+                .align(Alignment.CenterHorizontally)
+                .padding(16.dp)
+                .clickable { navController.navigate("screen_time") }
+        )
+        PieChartLegend(
+            slices = slices
+        )
+        Row(verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .align(Alignment.CenterHorizontally)){
+            Text(text = "Your Goals")
+            IconButton(onClick = {
+                navController.navigate("goals") {
+                    popUpTo(navController.graph.findStartDestination().id) {
+                        saveState = true
+                    }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }) {
+                Icon(
+                    imageVector = Icons.Default.Add,
+                    contentDescription = "Add goal"
+                )
+            }
+        }
+        if (firstThreeGoals.isEmpty()) {
+            Text(text = "No goals yet — add one!",
+                color = Color.Gray,
+                textAlign = TextAlign.Center,
+                fontFamily = FontFamily.Serif,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .fillMaxWidth()
+                    .padding(40.dp))
+        } else {
+            LazyColumn {
+                items(firstThreeGoals) { goal ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = goal.goal,
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(16.dp)
+                        )
+                        Checkbox(
+                            checked = goal.isDone,
+                            onCheckedChange = {
+                                goalsModel.toggleDone(goal.id)
+                            }
+                        )
+                    }
+                    HorizontalDivider()
+                }
+            }
+        }
+    }
+}
