@@ -1,8 +1,11 @@
 package com.fqrproject.fqr
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -18,11 +21,16 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.fqrproject.fqr.ui.fitness.FitnessScreen
+import com.fqrproject.fqr.ui.fitness.FitnessSummary
+import com.fqrproject.fqr.ui.fitness.LogWorkoutScreen
+import com.fqrproject.fqr.ui.fitness.WorkoutDetailsScreen
 import com.fqrproject.fqr.ui.goals.GoalsScreen
 import com.fqrproject.fqr.ui.goals.GoalsViewModel
 import com.fqrproject.fqr.ui.index.IndexScreen
 import com.fqrproject.fqr.ui.screentime.ScreenTimeViewModel
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AppNavHost() {
     val navController = rememberNavController()
@@ -62,6 +70,20 @@ fun AppNavHost() {
                     icon = { Icon(Icons.Default.DateRange, contentDescription = "Goals") },
                     label = { Text("Goals") }
                 )
+                NavigationBarItem(
+                    selected = currentRoute == "fitness",
+                    onClick = {
+                        navController.navigate("fitness") {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(Icons.Default.FitnessCenter, contentDescription = "Fitness") },
+                    label = { Text("Fitness") }
+                )
             }
         }
     ) { innerPadding ->
@@ -72,6 +94,29 @@ fun AppNavHost() {
         ) {
             composable("index") { IndexScreen(navController, viewModel) }
             composable("goals") { GoalsScreen(navController, viewModel) }
+            composable ("fitness") { FitnessScreen(navController) }
+
+            // within fitness page
+            composable("FitnessSummary") {
+                FitnessSummary(
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable("LogWorkoutScreen") {
+                LogWorkoutScreen(
+                    onBackClick = { navController.popBackStack() },
+                    onSave = {} // save to database
+                )
+            }
+
+            composable("workout_details/{workoutId}") { backStackEntry ->
+                val workoutId = backStackEntry.arguments?.getInt("workoutId") ?: 1
+                WorkoutDetailsScreen(
+                    workoutId = workoutId,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
         }
     }
 }
