@@ -28,7 +28,8 @@ class ScreenTimeViewModel(application: Application) : AndroidViewModel(applicati
     @RequiresPermission(Manifest.permission.PACKAGE_USAGE_STATS)
     fun getTopAppsUsage(): List<ScreenTime> {
         val context = getApplication<Application>()
-        val usageStatsManager = context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val usageStatsManager =
+            context.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
 
         val endTime = System.currentTimeMillis()
         val startTime = endTime - (24 * 60 * 60 * 1000) // last 24 hours
@@ -39,8 +40,11 @@ class ScreenTimeViewModel(application: Application) : AndroidViewModel(applicati
             endTime
         )
 
-        val top5list = statsList.filter{ x -> x.totalTimeInForeground > 0}
+        val top5list = statsList.filter { x -> x.totalTimeInForeground > 0 }
             .sortedByDescending { x -> x.totalTimeInForeground }
             .take(5)
+            .map { x -> ScreenTime(app = getAppName(context, x.packageName), time = x.totalTimeInForeground) }
+
+        return top5list
     }
 }
