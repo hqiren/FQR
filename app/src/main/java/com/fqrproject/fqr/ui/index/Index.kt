@@ -1,19 +1,15 @@
 package com.fqrproject.fqr.ui.index
 
-import android.R.attr.textSize
 import android.graphics.Paint
-import androidx.compose.animation.animateBounds
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -30,7 +26,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
@@ -38,20 +33,26 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.zIndex
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.fqrproject.fqr.ui.goals.GoalsViewModel
-import java.time.LocalDate
+import com.fqrproject.fqr.ui.screentime.ScreenTimeViewModel
 import java.time.format.DateTimeFormatter
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.random.Random
 
 data class PieSlice(
     val label: String,
-    val value: Float,
+    val value: Long,
     val color: Color
+)
+
+val randomColor = Color(
+    red = Random.nextFloat(),
+    green = Random.nextFloat(),
+    blue = Random.nextFloat(),
+    alpha = 1f
 )
 
 @Composable
@@ -123,14 +124,20 @@ fun PieChartLegend(slices: List<PieSlice>) {
 }
 
 @Composable
-fun IndexScreen(navController: NavController, goalsModel: GoalsViewModel) {
-    val slices = listOf(
-        PieSlice("Social Media", 120f, Color(0xFFE57373)),
-        PieSlice("Productivity", 90f, Color(0xFF81C784)),
-        PieSlice("Entertainment", 150f, Color(0xFF64B5F6)),
-        PieSlice("Other", 120f, Color(0xFFFFD54F))
+fun IndexScreen(navController: NavController, goalsModel: GoalsViewModel, screenTimeViewModel: ScreenTimeViewModel) {
+    val sliceColors = listOf(
+        Color(0xFF4FC3F7), // sky blue
+        Color(0xFFFFB74D), // amber
+        Color(0xFF81C784), // soft green
+        Color(0xFFFF8A65), // coral
+        Color(0xFFCE93D8)  // lavender
     )
     val goals = goalsModel.goals
+    val screenTimeData = screenTimeViewModel.screenTimeData
+    val slices = screenTimeData.mapIndexed { index, screenTime ->
+        PieSlice(label = screenTime.app,
+            value = screenTime.time,
+            color = sliceColors[index]) }
     val firstThreeGoals = goals.filter { goal -> !goal.isDone }.take(3)
     val today = java.time.LocalDate.now()
     val formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy")
@@ -149,17 +156,35 @@ fun IndexScreen(navController: NavController, goalsModel: GoalsViewModel) {
                 .align(Alignment.CenterHorizontally),
             textAlign = TextAlign.Center,
             fontFamily = FontFamily.Serif)
-        PieChart(
-            slices = slices,
-            modifier = Modifier
-                .size(200.dp)
-                .align(Alignment.CenterHorizontally)
-                .padding(16.dp)
-                .clickable { navController.navigate("screen_time") }
-        )
-        PieChartLegend(
-            slices = slices
-        )
+        if (slices.isEmpty()) {
+            Text(
+                text = "Tap to grant screen time permission",
+                color = Color.Gray,
+                textAlign = TextAlign.Center,
+                fontFamily = FontFamily.Serif,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .fillMaxWidth()
+                    .padding(16.dp)
+                    .clickable { navController.navigate("screentime") {
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        launchSingleTop = true
+                        restoreState = true
+                    }}
+            )
+        } else {
+            PieChart(
+                slices = slices,
+                modifier = Modifier
+                    .size(200.dp)
+                    .align(Alignment.CenterHorizontally)
+                    .padding(16.dp)
+                    .clickable { navController.navigate("screen_time") }
+            )
+            PieChartLegend(slices = slices)
+        }
         Row(verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .align(Alignment.CenterHorizontally)){

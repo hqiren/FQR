@@ -22,10 +22,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.fqrproject.fqr.ui.fitness.HeaderSection
 import java.util.UUID
 
 data class Goal(
@@ -66,6 +68,11 @@ fun GoalsScreen(navController: NavController, goalsModel: GoalsViewModel) {
         .fillMaxWidth()
         .safeDrawingPadding()
     ){
+        Row(modifier = Modifier
+            .padding(16.dp)
+        ) {
+            HeaderSection("Goals")
+        }
         Row(modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
                 value = input,

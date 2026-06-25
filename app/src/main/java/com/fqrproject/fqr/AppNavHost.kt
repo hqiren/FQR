@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccessTime
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.Home
@@ -28,6 +29,7 @@ import com.fqrproject.fqr.ui.fitness.WorkoutDetailsScreen
 import com.fqrproject.fqr.ui.goals.GoalsScreen
 import com.fqrproject.fqr.ui.goals.GoalsViewModel
 import com.fqrproject.fqr.ui.index.IndexScreen
+import com.fqrproject.fqr.ui.screentime.ScreenTimeScreen
 import com.fqrproject.fqr.ui.screentime.ScreenTimeViewModel
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -55,6 +57,20 @@ fun AppNavHost() {
                     },
                     icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
                     label = { Text("Home") }
+                )
+                NavigationBarItem(
+                    selected = currentRoute == "screentime",
+                    onClick = {
+                        navController.navigate("screentime") {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    icon = { Icon(Icons.Default.AccessTime, contentDescription = "Screen Time") },
+                    label = { Text("Screen Time") }
                 )
                 NavigationBarItem(
                     selected = currentRoute == "goals",
@@ -92,7 +108,8 @@ fun AppNavHost() {
             startDestination = "index",
             modifier = Modifier.padding(innerPadding)
         ) {
-            composable("index") { IndexScreen(navController, viewModel) }
+            composable("index") { IndexScreen(navController, viewModel, screenModel) }
+            composable("screentime") { ScreenTimeScreen(navController, screenModel) }
             composable("goals") { GoalsScreen(navController, viewModel) }
             composable ("fitness") { FitnessScreen(navController) }
 
