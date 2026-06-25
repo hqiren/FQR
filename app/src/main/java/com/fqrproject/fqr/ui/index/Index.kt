@@ -24,15 +24,22 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.fqrproject.fqr.ui.goals.GoalsViewModel
@@ -116,10 +123,21 @@ fun PieChartLegend(slices: List<PieSlice>) {
                             .background(slice.color)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(slice.label + ": " + slice.value)
+                    Text(slice.label + ": " + formatDuration(slice.value))
                 }
             }
         }
+    }
+}
+
+fun formatDuration(milliseconds: Long): String {
+    val totalMinutes = milliseconds / 60000
+    if (totalMinutes >= 60) {
+        val hours = totalMinutes / 60
+        val remainingMinutes = totalMinutes - hours * 60
+        return "${hours}h ${remainingMinutes}m"
+    } else {
+        return "${totalMinutes}m"
     }
 }
 
@@ -132,7 +150,7 @@ fun IndexScreen(navController: NavController, goalsModel: GoalsViewModel, screen
         Color(0xFFFF8A65), // coral
         Color(0xFFCE93D8)  // lavender
     )
-    val goals = goalsModel.goals
+    val goals by goalsModel.goals.collectAsState()
     val screenTimeData = screenTimeViewModel.screenTimeData
     val slices = screenTimeData.mapIndexed { index, screenTime ->
         PieSlice(label = screenTime.app,
@@ -142,6 +160,23 @@ fun IndexScreen(navController: NavController, goalsModel: GoalsViewModel, screen
     val today = java.time.LocalDate.now()
     val formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy")
     val formattedDate = today.format(formatter)
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                screenTimeViewModel.checkPermission(context)
+                if (screenTimeViewModel.hasPermission) {
+                    screenTimeViewModel.getTopAppsUsage()
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Column(modifier = Modifier
         .safeDrawingPadding()
@@ -181,7 +216,14 @@ fun IndexScreen(navController: NavController, goalsModel: GoalsViewModel, screen
                     .size(200.dp)
                     .align(Alignment.CenterHorizontally)
                     .padding(16.dp)
-                    .clickable { navController.navigate("screen_time") }
+                    .clickable {
+                        navController.navigate("screentime") {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        } }
             )
             PieChartLegend(slices = slices)
         }

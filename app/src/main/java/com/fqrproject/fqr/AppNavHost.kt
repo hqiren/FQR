@@ -1,5 +1,6 @@
 package com.fqrproject.fqr
 
+import android.app.Application
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.padding
@@ -16,6 +17,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -26,8 +28,10 @@ import com.fqrproject.fqr.ui.fitness.FitnessScreen
 import com.fqrproject.fqr.ui.fitness.FitnessSummary
 import com.fqrproject.fqr.ui.fitness.LogWorkoutScreen
 import com.fqrproject.fqr.ui.fitness.WorkoutDetailsScreen
+import com.fqrproject.fqr.ui.goals.GoalsRepository
 import com.fqrproject.fqr.ui.goals.GoalsScreen
 import com.fqrproject.fqr.ui.goals.GoalsViewModel
+import com.fqrproject.fqr.ui.goals.GoalsViewModelFactory
 import com.fqrproject.fqr.ui.index.IndexScreen
 import com.fqrproject.fqr.ui.screentime.ScreenTimeScreen
 import com.fqrproject.fqr.ui.screentime.ScreenTimeViewModel
@@ -38,7 +42,9 @@ fun AppNavHost() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
-    val viewModel: GoalsViewModel = viewModel()
+    val app =  LocalContext.current.applicationContext
+    val repo = GoalsRepository(LocalContext.current)
+    val viewModel: GoalsViewModel = viewModel(factory = GoalsViewModelFactory(app as Application, repo))
     val screenModel: ScreenTimeViewModel = viewModel()
 
     Scaffold(
