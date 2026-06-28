@@ -12,20 +12,35 @@ import android.provider.Settings
 import androidx.annotation.RequiresPermission
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Button
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -33,6 +48,7 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.fqrproject.fqr.ui.index.PieChart
 import com.fqrproject.fqr.ui.index.PieSlice
+import com.fqrproject.fqr.ui.index.formatDuration
 import kotlin.collections.emptyList
 
 data class ScreenTime(
@@ -62,6 +78,13 @@ fun hasUsagePermission(context: Context): Boolean {
 class ScreenTimeViewModel(application: Application) : AndroidViewModel(application) {
     var hasPermission by mutableStateOf(false)
     var screenTimeData by mutableStateOf<List<ScreenTime>>(emptyList())
+
+    var targetMinutes by mutableStateOf(120) // default 2 hours
+        private set
+
+    fun setTarget(minutes: Int) {
+        targetMinutes = minutes
+    }
 
     fun checkPermission(context: Context) {
         hasPermission = hasUsagePermission(context)
@@ -132,17 +155,147 @@ fun ScreenTimeScreen(
             }
         }
     } else {
-        val sliceColors = listOf(
-            Color(0xFF4FC3F7), // sky blue
-            Color(0xFFFFB74D), // amber
-            Color(0xFF81C784), // soft green
-            Color(0xFFFF8A65), // coral
-            Color(0xFFCE93D8)  // lavender
-        )
-        val pieSlices = screenModel.screenTimeData.mapIndexed { index, screenTime ->
-            PieSlice(label = screenTime.app,
-                value = screenTime.time,
-                color = sliceColors[index]) }
-        PieChart(pieSlices)
+    val sliceColors = listOf(
+        Color(0xFF4FC3F7),
+        Color(0xFFFFB74D),
+        Color(0xFF81C784),
+        Color(0xFFFF8A65),
+        Color(0xFFCE93D8)
+    )
+    val pieSlices = screenModel.screenTimeData.mapIndexed { index, screenTime ->
+        PieSlice(label = screenTime.app, value = screenTime.time, color = sliceColors[index])
     }
+    val totalTimeMili = screenModel.screenTimeData.sumOf { it.time }
+    val totalTime = formatDuration(totalTimeMili)
+    val targetMillis = screenModel.targetMinutes * 60000L
+    val overTarget = totalTimeMili > targetMillis
+    var sliderValue by remember { mutableStateOf(screenModel.targetMinutes.toFloat()) }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .safeDrawingPadding()
+            .padding(horizontal = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.height(8.dp))
+
+        // Screen title
+        Text(
+            text = "Screen Time",
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.align(Alignment.Start)
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // Today's usage section
+        Text(
+            text = "Today's Usage",
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.Gray,
+            modifier = Modifier.align(Alignment.Start)
+        )
+        Text(
+            text = totalTime,
+            style = MaterialTheme.typography.displayMedium
+        )
+        Text(
+            text = if (overTarget)
+                "⚠ Over target by ${formatDuration(totalTimeMili - targetMillis)}"
+            else
+                "✓ ${formatDuration(targetMillis - totalTimeMili)} remaining",
+            color = if (overTarget) Color(0xFFE57373) else Color(0xFF81C784),
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // Pie chart
+        PieChart(
+            slices = pieSlices,
+            modifier = Modifier
+                .size(180.dp)
+                .padding(8.dp)
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // Daily limit section
+        Text(
+            text = "Daily Limit",
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.Gray,
+            modifier = Modifier.align(Alignment.Start)
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Slider(
+                value = sliderValue,
+                onValueChange = { sliderValue = it },
+                valueRange = 30f..480f,
+                steps = 14,
+                modifier = Modifier.weight(1f)
+            )
+            Spacer(Modifier.width(8.dp))
+            Text(
+                text = formatDuration(sliderValue.toInt() * 60000L),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.width(56.dp)
+            )
+        }
+        Button(
+            onClick = { screenModel.setTarget(sliderValue.toInt()) },
+            modifier = Modifier.align(Alignment.End)
+        ) {
+            Text("Save")
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // Top apps section
+        Text(
+            text = "Top Apps",
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.Gray,
+            modifier = Modifier.align(Alignment.Start)
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        LazyColumn(modifier = Modifier.weight(1f)) {
+            itemsIndexed(screenModel.screenTimeData) { index, screenTime ->
+                val progress = screenTime.time.toFloat() / totalTimeMili.toFloat()
+                Column(modifier = Modifier.padding(vertical = 8.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = screenTime.app,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            text = formatDuration(screenTime.time),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.Gray
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(end = 8.dp),
+                        color = sliceColors[index]
+                    )
+                }
+                HorizontalDivider()
+            }
+        }
+    }
+}
 }

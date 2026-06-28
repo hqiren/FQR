@@ -40,16 +40,13 @@ android {
 }
 
 dependencies {
-    //room database
     implementation("androidx.room:room-runtime:2.8.4")
     implementation("androidx.room:room-ktx:2.8.4")
-    implementation(libs.places)
     ksp("androidx.room:room-compiler:2.8.4")
     implementation(platform("androidx.compose:compose-bom:2023.10.01"))
     implementation("androidx.activity:activity-compose")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material:material")
-
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
     implementation("androidx.compose.material:material-icons-core:1.7.0")

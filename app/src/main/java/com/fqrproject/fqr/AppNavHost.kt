@@ -20,15 +20,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.fqrproject.fqr.ui.fitness.FitnessScreen
 import com.fqrproject.fqr.ui.fitness.FitnessSummary
 import com.fqrproject.fqr.ui.fitness.LogWorkoutScreen
 import com.fqrproject.fqr.ui.fitness.StepViewModel
 import com.fqrproject.fqr.ui.fitness.WorkoutDetailsScreen
+import com.fqrproject.fqr.ui.goals.GoalDetailScreen
 import com.fqrproject.fqr.ui.goals.GoalsRepository
 import com.fqrproject.fqr.ui.goals.GoalsScreen
 import com.fqrproject.fqr.ui.goals.GoalsViewModel
@@ -48,6 +51,7 @@ fun AppNavHost() {
     val viewModel: GoalsViewModel = viewModel(factory = GoalsViewModelFactory(app as Application, repo))
     val screenModel: ScreenTimeViewModel = viewModel()
     val stepViewModel: StepViewModel = viewModel()
+
 
     Scaffold(
         bottomBar = {
@@ -120,6 +124,19 @@ fun AppNavHost() {
             composable("screentime") { ScreenTimeScreen(navController, screenModel) }
             composable("goals") { GoalsScreen(navController, viewModel) }
             composable ("fitness") { FitnessScreen(navController, stepViewModel) }
+
+            // for individual goal detail
+            composable(
+                route = "goal_info/{goalId}",
+                arguments = listOf(navArgument("goalId") { type = NavType.StringType })
+            ) { backStackEntry ->
+                val goalId = backStackEntry.arguments?.getString("goalId") ?: ""
+                GoalDetailScreen(
+                    goalId = goalId,
+                    goalsModel = viewModel,
+                    navController = navController
+                )
+            }
 
             // within fitness page
             composable("FitnessSummary") {
