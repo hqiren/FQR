@@ -15,63 +15,94 @@ import androidx.compose.material.icons.filled.Sports
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun WorkoutDetailsScreen(workoutId: Int, onBackClick: () -> Unit) {
-    val workout = getWorkout(workoutId)
+    var workout by remember { mutableStateOf<Workout?>(null) }
+    val context = LocalContext.current
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            HeaderSection(
-                title = workout.name,
-                showBackButton = true,
-                onBackClick = onBackClick
-            )
+    LaunchedEffect(workoutId) {
+        workout = Workout.getById(context, workoutId)
+    }
+
+    if (workout == null) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator()
         }
-
-        // workout type (cardio, strength etc)
-        item {
-            WorkoutTypeBadge(workout)
-        }
-
-        // stats
-        item {
-            val s1 = StatData("Duration", workout.duration.toString() + " min",
-                Icons.Default.Timer, Color(0xFF4CAF50))
-            val s2 = StatData("Calories", workout.calories.toString(),
-                Icons.Default.LocalFireDepartment, Color(0xFFFF5722))
-            val s3 = StatData("Distance", workout.distance.toString() + " m",
-                Icons.Default.Route, Color(0xFF2196F3))
-            StatsRow(listOf(s1, s2, s3))
-        }
-
-        // workout details
-        item {
-            WorkoutDetailsCard(workout)
-        }
-
-        //  workout notes
-        if (workout.notes.isNotEmpty()) {
+    } else {
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             item {
-                NotesSection(workout.notes)
+                HeaderSection(
+                    // definitely got workout, so can use !! to force
+                    title = workout!!.name,
+                    showBackButton = true,
+                    onBackClick = onBackClick
+                )
             }
-        }
 
-        // edit/delete Buttons
-        item {
-            WorkoutActions()
+            // workout type (cardio, strength etc)
+            item {
+                WorkoutTypeBadge(workout!!)
+            }
+
+            // stats
+            item {
+                val s1 = StatData(
+                    "Duration", workout!!.duration.toString() + " min",
+                    Icons.Default.Timer, Color(0xFF4CAF50)
+                )
+                val s2 = StatData(
+                    "Calories", workout!!.calories.toString(),
+                    Icons.Default.LocalFireDepartment, Color(0xFFFF5722)
+                )
+                val s3 = StatData(
+                    "Distance", workout!!.distance.toString() + " m",
+                    Icons.Default.Route, Color(0xFF2196F3)
+                )
+                StatsRow(listOf(s1, s2, s3))
+            }
+
+            // workout details
+            item {
+                WorkoutDetailsCard(workout!!)
+            }
+
+            //  workout notes
+            if (workout!!.notes.isNotEmpty()) {
+                item {
+                    NotesSection(workout!!.notes)
+                }
+            }
+
+                // edit/delete Buttons
+                // skip for now
+                /*item {
+                WorkoutActions()
+            }*/
         }
     }
 
@@ -97,6 +128,7 @@ fun WorkoutTypeBadge(workout: Workout) {
 
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun WorkoutDetailsCard(workout: Workout) {
     Surface(
@@ -115,7 +147,8 @@ fun WorkoutDetailsCard(workout: Workout) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            DetailRow("Date", workout.date.toString())
+            val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy, HH:mm")
+            DetailRow("Date", workout.date?.format(dateFormatter) ?: "NIL")
             Spacer(modifier = Modifier.height(8.dp))
             DetailRow("Type", workout.type)
             Spacer(modifier = Modifier.height(8.dp))
