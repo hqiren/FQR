@@ -18,6 +18,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import android.app.DatePickerDialog
+import android.app.TimePickerDialog
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.launch
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -30,7 +37,10 @@ fun LogWorkoutScreen(onBackClick: () -> Unit, onSave: (Workout) -> Unit) {
     var workoutCalories by remember { mutableStateOf("") }
     var workoutDist by remember { mutableStateOf("") }
     var workoutNotes by remember { mutableStateOf("") }
-    //var workoutDate by remember { mutableStateOf(LocalDateTime.now()) }
+    var workoutDate by remember { mutableStateOf(LocalDateTime.now()) }
+
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     Column(
         modifier = Modifier
@@ -65,19 +75,6 @@ fun LogWorkoutScreen(onBackClick: () -> Unit, onSave: (Workout) -> Unit) {
             onTypeSelected = { workoutType = it }
         )
 
-        // duration in minutes
-        OutlinedTextField(
-            value = workoutDuration,
-            onValueChange = { workoutDuration = it },
-            label = { Text("Duration (minutes)") },
-            placeholder = { Text("e.g. 30") },
-            modifier = Modifier.fillMaxWidth(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            leadingIcon = {
-                Icon(Icons.Default.Timer, contentDescription = null)
-            }
-        )
-
         // calories
         OutlinedTextField(
             value = workoutCalories,
@@ -105,7 +102,27 @@ fun LogWorkoutScreen(onBackClick: () -> Unit, onSave: (Workout) -> Unit) {
         )
 
         // workout date and time
-        //DateTimeSelector()
+        DateTimeSelector(
+            selectedDateTime = workoutDate,
+            onDateTimeSelected = { newDateTime ->
+                workoutDate = newDateTime
+            }
+        )
+
+
+        // duration in minutes
+        OutlinedTextField(
+            value = workoutDuration,
+            onValueChange = { workoutDuration = it },
+            label = { Text("Duration (minutes)") },
+            placeholder = { Text("e.g. 30") },
+            modifier = Modifier.fillMaxWidth(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            leadingIcon = {
+                Icon(Icons.Default.Timer, contentDescription = null)
+            }
+        )
+
 
         // workout notes (optional)
         OutlinedTextField(
@@ -123,9 +140,26 @@ fun LogWorkoutScreen(onBackClick: () -> Unit, onSave: (Workout) -> Unit) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // save workout
+        // save workout to db
         Button(
-            onClick = {}, // save to database
+            onClick = {
+                if (workoutName.isNotBlank() && workoutDuration.isNotBlank() && workoutCalories.isNotBlank()) {
+                    val workout = Workout(
+                        name = workoutName,
+                        type = workoutType,
+                        duration = workoutDuration.toIntOrNull() ?: 0,
+                        calories = workoutCalories.toIntOrNull() ?: 0,
+                        distance = workoutDist.toIntOrNull() ?: 0,
+                        date = workoutDate,
+                        notes = workoutNotes
+                    )
+
+                    scope.launch {
+                        Workout.insert(context, workout)
+                        onBackClick()
+                    }
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
@@ -231,6 +265,129 @@ fun WorkoutTypeDropdown(
                         expanded = false
                     }
                 )
+            }
+        }
+    }
+}
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun DateTimeSelector(
+    selectedDateTime: LocalDateTime,
+    onDateTimeSelected: (LocalDateTime) -> Unit
+) {
+    val context = LocalContext.current
+    var currentDateTime by remember { mutableStateOf(selectedDateTime) }
+
+    val showDatePicker = { // date picker
+        DatePickerDialog(
+            context,
+            { _, year, month, dayOfMonth ->
+                currentDateTime = LocalDateTime.of(
+                    year,
+                    month + 1,
+                    dayOfMonth,
+                    currentDateTime.hour,
+                    currentDateTime.minute
+                )
+                onDateTimeSelected(currentDateTime)
+            },
+            currentDateTime.year,
+            currentDateTime.monthValue - 1, // starts from 0
+            currentDateTime.dayOfMonth
+        ).show()
+    }
+
+    val showTimePicker = { // time picker
+        TimePickerDialog(
+            context,
+            { _, hourOfDay, minute ->
+                currentDateTime = currentDateTime.withHour(hourOfDay).withMinute(minute)
+                onDateTimeSelected(currentDateTime)
+            },
+            currentDateTime.hour,
+            currentDateTime.minute,
+            false
+        ).show()
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            text = "Start Date & Time",
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(start = 4.dp)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Surface( // date card
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { showDatePicker() }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Date",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = currentDateTime.format(
+                                DateTimeFormatter.ofPattern("MMM dd, yyyy")
+                            ),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.CalendarToday,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
+            }
+
+            Surface( // time card
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable { showTimePicker() }
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Time",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = currentDateTime.format(
+                                DateTimeFormatter.ofPattern("hh:mm a") // e.g. 07:44 AM
+                            ),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }

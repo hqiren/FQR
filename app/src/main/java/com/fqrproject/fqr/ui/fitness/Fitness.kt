@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -27,7 +28,7 @@ import java.time.LocalDateTime
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun FitnessScreen(navController: NavController) {
+fun FitnessScreen(navController: NavController, stepViewModel: StepViewModel) {
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -42,25 +43,38 @@ fun FitnessScreen(navController: NavController) {
 
         // stats
         item {
-            val s1 = StatData("Steps", "6,667",
-                Icons.Default.Snowshoeing, Color(0xFF4CAF50))
-            val s2 = StatData("Calories", "599",
-                Icons.Default.LocalFireDepartment, Color(0xFFFF5722))
-            val s3 = StatData("Distance", "6.2 km",
-                Icons.Default.Route, Color(0xFF2196F3))
+            val context = LocalContext.current
+            val stepCount by remember(context) {
+                Step.getTodaySteps(context)
+            }.collectAsState(initial = 0)
+
+            val s1 = StatData("Steps", stepCount.toString(),
+                Icons.Default.Snowshoeing, Color(0xFF50C878))
+
+            val estCals = stepsToCalories(stepCount).toString()
+            val s2 = StatData("Est. Calories", estCals,
+                Icons.Default.LocalFireDepartment, Color(0xFFFF4500))
+
+            val estDist = "%.2f".format(stepsToDistance(stepCount))
+            val s3 = StatData("Est. Distance", estDist + " km",
+                Icons.Default.Route, Color(0xFF89CFF0))
 
             StatsRow(listOf(s1, s2, s3))
-
         }
 
         // daily progress
         item {
-            ProgressSection()
+            val context = LocalContext.current
+            val stepCount by remember(context) {
+                Step.getTodaySteps(context)
+            }.collectAsState(initial = 0)
+
+            ProgressSection(stepCount = stepCount)
         }
 
         // quick actions
         item {
-            QuickActionsSection(navController)
+            QuickActionsSection(navController, stepViewModel)
         }
 
         // latest workouts
@@ -77,7 +91,7 @@ fun HeaderSection(
     onBackClick: (() -> Unit)? = null
 ) {
     Column {
-        // Back button if required
+        // back button if required (depends on which page user is on)
         if (showBackButton && onBackClick != null) {
             IconButton(onClick = onBackClick) {
                 Icon(
@@ -87,7 +101,7 @@ fun HeaderSection(
             }
         }
 
-        // Title
+        // title of page
         Text(
             text = title,
             style = MaterialTheme.typography.headlineLarge,
@@ -163,7 +177,7 @@ fun StatCard( // design for the stats
 }
 
 @Composable
-fun ProgressSection() { // for daily goal progress
+fun ProgressSection(stepCount: Int) { // for daily goal progress
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface
@@ -183,8 +197,8 @@ fun ProgressSection() { // for daily goal progress
             // daily steps progress
             ProgressItem(
                 label = "Steps",
-                current = 6667, // can take from workout once sort out database
-                goal = 10000,
+                current = stepCount,
+                goal = 10000, // can change aft goal settle
                 color = Color(0xFF4CAF50)
             )
 
@@ -193,8 +207,8 @@ fun ProgressSection() { // for daily goal progress
             // daily calories progress
             ProgressItem(
                 label = "Calories",
-                current = 599, // can take from workout once sort out database
-                goal = 800,
+                current = stepsToCalories(stepCount),
+                goal = 800, // to be sorted after goal settled
                 color = Color(0xFFFF5722)
             )
         }
@@ -239,8 +253,10 @@ fun ProgressItem(
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun QuickActionsSection(navController: NavController) {
+fun QuickActionsSection(navController: NavController, stepViewModel: StepViewModel) {
+    val context = LocalContext.current
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = MaterialTheme.colorScheme.surface
@@ -272,7 +288,8 @@ fun QuickActionsSection(navController: NavController) {
                 ActionButton(
                     text = "",
                     icon = Icons.Default.Sync,
-                    onClick = {  }, // sync workout
+                    onClick = {
+                        stepViewModel.syncSteps(context) }, // sync steps to database
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -307,7 +324,8 @@ fun ActionButton(
 fun RecentWorkoutSection(navController: NavController) {
     Surface(
         shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surface
+        color = MaterialTheme.colorScheme.surface,
+        modifier = Modifier.fillMaxWidth(),
     ) {
         Column (modifier = Modifier.padding(16.dp) ){
             Text(
@@ -317,14 +335,22 @@ fun RecentWorkoutSection(navController: NavController) {
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
-            val workout = getWorkout(1)
-            val workouts = listOf(workout)
+            val context = LocalContext.current
+            val workouts by remember(context) { Workout.getLast3(context) }.collectAsState(initial = emptyList())
 
             workouts.forEach { workout ->
                 WorkoutItem(
                     workout = workout,
-                    onClick = { navController.navigate("workout_details/${workout.name}") })
+                    onClick = { navController.navigate("workout_details/${workout.id}") })
                 Spacer(modifier = Modifier.height(8.dp))
+            }
+
+            if (workouts.isEmpty()) {
+                Text(
+                    text = "No workouts yet\nStart by clicking + icon under Quick Actions",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -389,30 +415,15 @@ data class StatData (
     val modifier: Modifier = Modifier
 )
 
-// Data class for activities/workout
-data class Workout(
-    val id: Int, // 1,2,3,4,5
-    val name: String,
-    val type: String,  // cardio, strength others
-    val duration: Int, // duration in minutes
-    val calories: Int, // e.g., 320
-    val distance: Int = 0,  // distance in meters
-    val date: LocalDateTime?,
-    val notes: String = "",
-) {
-    val icon: ImageVector // take icon based on workout type
-        get() = when (type.lowercase()) {
-            "cardio" -> Icons.AutoMirrored.Filled.DirectionsRun
-            "strength" -> Icons.Default.FitnessCenter
-            else -> Icons.Default.Sports  // "others"
-        }
+
+fun stepsToDistance(steps: Int): Double {
+    // avg stride 1.4 m
+    val distanceInMeters = steps * 1.4
+    val distanceInKm = distanceInMeters / 1000
+    return distanceInKm
 }
 
-@RequiresApi(Build.VERSION_CODES.O)
-fun getWorkout(workoutId: Int): Workout {
-    val egdate = LocalDateTime.of(2026, 8, 9, 12, 0)
-    return Workout(
-        id = workoutId,
-        name = "Running", type = "Cardio", duration = 43,
-        calories = 320, distance = 4000,date = egdate, notes = "oi")
+fun stepsToCalories(steps: Int): Int {
+    // avg 0.045 cal per step
+    return (steps * 0.045).toInt()
 }

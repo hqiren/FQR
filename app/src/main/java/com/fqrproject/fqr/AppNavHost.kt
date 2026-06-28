@@ -29,6 +29,7 @@ import androidx.navigation.navArgument
 import com.fqrproject.fqr.ui.fitness.FitnessScreen
 import com.fqrproject.fqr.ui.fitness.FitnessSummary
 import com.fqrproject.fqr.ui.fitness.LogWorkoutScreen
+import com.fqrproject.fqr.ui.fitness.StepViewModel
 import com.fqrproject.fqr.ui.fitness.WorkoutDetailsScreen
 import com.fqrproject.fqr.ui.goals.GoalDetailScreen
 import com.fqrproject.fqr.ui.goals.GoalsRepository
@@ -49,6 +50,8 @@ fun AppNavHost() {
     val repo = GoalsRepository(LocalContext.current)
     val viewModel: GoalsViewModel = viewModel(factory = GoalsViewModelFactory(app as Application, repo))
     val screenModel: ScreenTimeViewModel = viewModel()
+    val stepViewModel: StepViewModel = viewModel()
+
 
     Scaffold(
         bottomBar = {
@@ -120,7 +123,7 @@ fun AppNavHost() {
             composable("index") { IndexScreen(navController, viewModel, screenModel) }
             composable("screentime") { ScreenTimeScreen(navController, screenModel) }
             composable("goals") { GoalsScreen(navController, viewModel) }
-            composable ("fitness") { FitnessScreen(navController) }
+            composable ("fitness") { FitnessScreen(navController, stepViewModel) }
 
             // for individual goal detail
             composable(
@@ -150,7 +153,7 @@ fun AppNavHost() {
             }
 
             composable("workout_details/{workoutId}") { backStackEntry ->
-                val workoutId = backStackEntry.arguments?.getInt("workoutId") ?: 1
+                val workoutId = backStackEntry.arguments?.getString("workoutId")?.toIntOrNull()?: 0
                 WorkoutDetailsScreen(
                     workoutId = workoutId,
                     onBackClick = { navController.popBackStack() }

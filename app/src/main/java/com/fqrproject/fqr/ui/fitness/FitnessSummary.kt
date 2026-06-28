@@ -6,15 +6,19 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Route
-import androidx.compose.material.icons.filled.Snowshoeing
 import androidx.compose.material.icons.filled.Sports
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -36,12 +40,40 @@ fun FitnessSummary(onBackClick: () -> Unit) {
 
         // stats
         item {
-            val s1 = StatData("Your Favourite Workout", "Running",
-                Icons.Default.Sports, Color(0xFF4CAF50))
-            val s2 = StatData("Avg time per workout", "1h 33min",
-                Icons.Default.Timer, Color(0xFFFF5722))
-            val s3 = StatData("Avg Distance per day", "6.9 km",
-                Icons.Default.Route, Color(0xFF2196F3))
+
+            val context = LocalContext.current
+
+            // fave workout type
+            var woType: String? by remember { mutableStateOf("NIL") }
+            LaunchedEffect(Unit) {
+                woType = Workout.getFavouriteType(context)
+            }
+
+            // avg time per workout
+            var avgDuration by remember { mutableStateOf(0.0) }
+
+            LaunchedEffect(Unit) {
+                avgDuration = Workout.getAverageDuration(context)
+            }
+
+            // avg steps per day
+            var avgStepCount by remember { mutableIntStateOf(0) }
+
+            LaunchedEffect(Unit) {
+                avgStepCount = Step.getAverageSteps(context)
+            }
+
+            val s1 = StatData("Your Favourite Workout Type", woType!!,
+                Icons.Default.Sports, Color(0xFF4CAF50)
+            )
+            val s2 = StatData("Avg time per workout",
+                "%.2f".format(avgDuration) + " min",
+                Icons.Default.Timer, Color(0xFFFF5722)
+            )
+            val s3 = StatData("Avg Distance per day",
+                "%.2f".format(stepsToDistance(avgStepCount)) + " km",
+                Icons.Default.Route, Color(0xFF2196F3)
+            )
             StatsRow(listOf(s1, s2, s3))
         }
 
@@ -70,8 +102,21 @@ fun RecommendationSection() {
             )
             Spacer(modifier = Modifier.height(20.dp)) // formatting
 
+            val context = LocalContext.current
+
+            // fave workout type
+            var woType: String? by remember { mutableStateOf("NIL") }
+            LaunchedEffect(Unit) {
+                woType = Workout.getFavouriteType(context)
+            }
+
+            val recommendationTxt = when (woType) { // algo to decide recommendation
+                "strength" -> "More Cardio Sessions"
+                else -> "More Strength Training"
+            }
+
             Text(
-                text = "\n" + "More Strength Training" + "\n\n", // formatting
+                text = "\n" + recommendationTxt + "\n\n", // formatting
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center
