@@ -29,15 +29,18 @@ import java.time.format.DateTimeFormatter
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun LogWorkoutScreen(onBackClick: () -> Unit, onSave: (Workout) -> Unit) {
-    // rmb state of fields
-    var workoutName by remember { mutableStateOf("") }
-    var workoutType by remember { mutableStateOf("cardio") }
-    var workoutDuration by remember { mutableStateOf("") }
-    var workoutCalories by remember { mutableStateOf("") }
-    var workoutDist by remember { mutableStateOf("") }
-    var workoutNotes by remember { mutableStateOf("") }
-    var workoutDate by remember { mutableStateOf(LocalDateTime.now()) }
+fun LogWorkoutScreen(
+    onBackClick: () -> Unit,
+    workoutToEdit: Workout? = null // null means logging new workout
+) {
+    // rmb state of fields, init with workout details if editing
+    var workoutName by remember { mutableStateOf(workoutToEdit?.name ?: "") }
+    var workoutType by remember { mutableStateOf(workoutToEdit?.type ?: "cardio") }
+    var workoutDuration by remember { mutableStateOf(workoutToEdit?.duration?.toString() ?: "") }
+    var workoutCalories by remember { mutableStateOf(workoutToEdit?.calories?.toString() ?: "") }
+    var workoutDist by remember { mutableStateOf(workoutToEdit?.distance?.toString() ?: "") }
+    var workoutNotes by remember { mutableStateOf(workoutToEdit?.notes ?: "") }
+    var workoutDate by remember { mutableStateOf(workoutToEdit?.date ?: LocalDateTime.now()) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -52,7 +55,11 @@ fun LogWorkoutScreen(onBackClick: () -> Unit, onSave: (Workout) -> Unit) {
     ) {
         // title
         HeaderSection(
-            title = "Log Workout",
+            title = if (workoutToEdit == null) {
+                "Log Workout"
+            } else {
+                "Edit Workout"
+            },
             showBackButton = true,
             onBackClick = onBackClick
         )
@@ -145,6 +152,7 @@ fun LogWorkoutScreen(onBackClick: () -> Unit, onSave: (Workout) -> Unit) {
             onClick = {
                 if (workoutName.isNotBlank() && workoutDuration.isNotBlank() && workoutCalories.isNotBlank()) {
                     val workout = Workout(
+                        id = workoutToEdit?.id ?: 0, // use current id if is editing
                         name = workoutName,
                         type = workoutType,
                         duration = workoutDuration.toIntOrNull() ?: 0,
@@ -155,7 +163,11 @@ fun LogWorkoutScreen(onBackClick: () -> Unit, onSave: (Workout) -> Unit) {
                     )
 
                     scope.launch {
-                        Workout.insert(context, workout)
+                        if (workoutToEdit == null) {
+                            Workout.insert(context, workout)
+                        } else {
+                            Workout.update(context, workout)
+                        }
                         onBackClick()
                     }
                 }
@@ -165,7 +177,10 @@ fun LogWorkoutScreen(onBackClick: () -> Unit, onSave: (Workout) -> Unit) {
                 .height(56.dp),
             shape = RoundedCornerShape(12.dp),
         ) {
-            Text("Save Workout", style = MaterialTheme.typography.titleMedium)
+            Text(
+                text = if (workoutToEdit == null) "Save Workout" else "Update Workout",
+                style = MaterialTheme.typography.titleMedium
+            )
         }
     }
 }

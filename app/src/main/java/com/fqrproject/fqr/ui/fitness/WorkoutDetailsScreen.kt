@@ -20,6 +20,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
@@ -34,9 +36,10 @@ import java.time.format.DateTimeFormatter
 @Composable
 fun WorkoutDetailsScreen(workoutId: Int, onBackClick: () -> Unit) {
     var workout by remember { mutableStateOf<Workout?>(null) }
+    var isEditing by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
-    LaunchedEffect(workoutId) {
+    LaunchedEffect(workoutId, isEditing) {
         workout = Workout.getById(context, workoutId)
     }
 
@@ -47,6 +50,11 @@ fun WorkoutDetailsScreen(workoutId: Int, onBackClick: () -> Unit) {
         ) {
             CircularProgressIndicator()
         }
+    } else if (isEditing) { // jump to the log workout screen with the fields alr filled in
+        LogWorkoutScreen(
+            onBackClick = { isEditing = false },
+            workoutToEdit = workout
+        )
     } else {
         LazyColumn(
             modifier = Modifier
@@ -57,19 +65,16 @@ fun WorkoutDetailsScreen(workoutId: Int, onBackClick: () -> Unit) {
         ) {
             item {
                 HeaderSection(
-                    // definitely got workout, so can use !! to force
                     title = workout!!.name,
                     showBackButton = true,
                     onBackClick = onBackClick
                 )
             }
 
-            // workout type (cardio, strength etc)
             item {
                 WorkoutTypeBadge(workout!!)
             }
 
-            // stats
             item {
                 val s1 = StatData(
                     "Duration", workout!!.duration.toString() + " min",
@@ -86,26 +91,25 @@ fun WorkoutDetailsScreen(workoutId: Int, onBackClick: () -> Unit) {
                 StatsRow(listOf(s1, s2, s3))
             }
 
-            // workout details
             item {
                 WorkoutDetailsCard(workout!!)
             }
 
-            //  workout notes
             if (workout!!.notes.isNotEmpty()) {
                 item {
                     NotesSection(workout!!.notes)
                 }
             }
 
-                // edit/delete Buttons
-                // skip for now
-                /*item {
-                WorkoutActions()
-            }*/
+            item {
+                WorkoutActions(
+                    workout = workout!!,
+                    onEditClicked = { isEditing = true },
+                    onDeleted = onBackClick
+                )
+            }
         }
     }
-
 }
 
 @Composable
@@ -211,13 +215,16 @@ fun NotesSection(notes: String) {
 }
 
 @Composable
-fun WorkoutActions() {
+fun WorkoutActions(workout: Workout, onEditClicked: () -> Unit, onDeleted: () -> Unit) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     Column(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Button(
-            onClick = { }, // edit workout
+            // edit workout btn
+            onClick = onEditClicked,
             modifier = Modifier.fillMaxWidth(),
             colors = ButtonDefaults.buttonColors(
                 containerColor = MaterialTheme.colorScheme.primary,
@@ -227,8 +234,12 @@ fun WorkoutActions() {
             Text("Edit Workout")
         }
 
-        OutlinedButton(
-            onClick = { }, // delete workout
+        OutlinedButton( // delete workout btn
+            onClick = {
+                scope.launch {
+                Workout.delete(context, workout)
+                onDeleted()
+                } },
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Delete Workout")

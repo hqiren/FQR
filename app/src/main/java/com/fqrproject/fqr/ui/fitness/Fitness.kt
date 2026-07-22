@@ -77,7 +77,7 @@ fun FitnessScreen(navController: NavController, stepViewModel: StepViewModel) {
             QuickActionsSection(navController, stepViewModel)
         }
 
-        // latest workouts
+        // last 3 workouts
         item {
             RecentWorkoutSection(navController)
         }
@@ -328,12 +328,21 @@ fun RecentWorkoutSection(navController: NavController) {
         modifier = Modifier.fillMaxWidth(),
     ) {
         Column (modifier = Modifier.padding(16.dp) ){
-            Text(
-                text = "Recent Workouts",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Recent Workouts",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                TextButton(onClick = { navController.navigate("AllWorkoutsScreen") }) {
+                    Text("See All")
+                }
+
+            }
 
             val context = LocalContext.current
             val workouts by remember(context) { Workout.getLast3(context) }.collectAsState(initial = emptyList())

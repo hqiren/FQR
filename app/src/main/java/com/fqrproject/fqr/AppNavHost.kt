@@ -29,6 +29,7 @@ import androidx.navigation.navArgument
 import com.fqrproject.fqr.ui.fitness.FitnessScreen
 import com.fqrproject.fqr.ui.fitness.FitnessSummary
 import com.fqrproject.fqr.ui.fitness.LogWorkoutScreen
+import com.fqrproject.fqr.ui.fitness.AllWorkoutsScreen
 import com.fqrproject.fqr.ui.fitness.StepViewModel
 import com.fqrproject.fqr.ui.fitness.WorkoutDetailsScreen
 import com.fqrproject.fqr.ui.goals.GoalDetailScreen
@@ -147,8 +148,7 @@ fun AppNavHost() {
 
             composable("LogWorkoutScreen") {
                 LogWorkoutScreen(
-                    onBackClick = { navController.popBackStack() },
-                    onSave = {} // save to database
+                    onBackClick = { navController.popBackStack() }
                 )
             }
 
@@ -156,6 +156,13 @@ fun AppNavHost() {
                 val workoutId = backStackEntry.arguments?.getString("workoutId")?.toIntOrNull()?: 0
                 WorkoutDetailsScreen(
                     workoutId = workoutId,
+                    onBackClick = { navController.popBackStack() }
+                )
+            }
+
+            composable("AllWorkoutsScreen") {
+                AllWorkoutsScreen(
+                    navController = navController,
                     onBackClick = { navController.popBackStack() }
                 )
             }
