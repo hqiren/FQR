@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">FQR</string>
+    <string name="accessibility_description">FQR uses accessibility to detect when blocked apps are opened</string>
 </resources>

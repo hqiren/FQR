@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -22,6 +23,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -34,7 +36,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -55,15 +56,8 @@ data class PieSlice(
     val color: Color
 )
 
-val randomColor = Color(
-    red = Random.nextFloat(),
-    green = Random.nextFloat(),
-    blue = Random.nextFloat(),
-    alpha = 1f
-)
-
 @Composable
-fun PieChart(
+fun PieChart( // Screen Time Pie Chart
     slices: List<PieSlice>,
     modifier: Modifier = Modifier
 ) {
@@ -82,7 +76,7 @@ fun PieChart(
             val xcoord = xcenter + radius * cos(midAngleRad.toFloat())
             val ycoord = ycenter + radius * sin(midAngleRad.toFloat())
             val paint = Paint().apply {
-                color = Color.Black.toArgb()
+                color = Color.White.toArgb()
                 textSize = 12.dp.toPx()
                 textAlign = Paint.Align.CENTER
             }
@@ -96,7 +90,9 @@ fun PieChart(
                 size = Size(size.width, size.height)
             )
 
-            drawContext.canvas.nativeCanvas.drawText(slice.label, xcoord, ycoord, paint)
+            if (sweep > 15f) {
+                drawContext.canvas.nativeCanvas.drawText(formatDuration(slice.value), xcoord, ycoord, paint)
+            }
 
             startAngle += sweep
         }
@@ -104,7 +100,7 @@ fun PieChart(
 }
 
 @Composable
-fun PieChartLegend(slices: List<PieSlice>) {
+fun PieChartLegend(slices: List<PieSlice>) { // Legend of ScreenTime including Names and Time
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -123,14 +119,14 @@ fun PieChartLegend(slices: List<PieSlice>) {
                             .background(slice.color)
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text(slice.label + ": " + formatDuration(slice.value))
+                    Text(slice.label)
                 }
             }
         }
     }
 }
 
-fun formatDuration(milliseconds: Long): String {
+fun formatDuration(milliseconds: Long): String { // Simple function to format duration from milliseconds to readable format
     val totalMinutes = milliseconds / 60000
     if (totalMinutes >= 60) {
         val hours = totalMinutes / 60
@@ -144,18 +140,17 @@ fun formatDuration(milliseconds: Long): String {
 @Composable
 fun IndexScreen(navController: NavController, goalsModel: GoalsViewModel, screenTimeViewModel: ScreenTimeViewModel) {
     val sliceColors = listOf(
-        Color(0xFF4FC3F7), // sky blue
-        Color(0xFFFFB74D), // amber
-        Color(0xFF81C784), // soft green
-        Color(0xFFFF8A65), // coral
-        Color(0xFFCE93D8)  // lavender
+        Color(0xFF4FC3F7),
+        Color(0xFFFFB74D),
+        Color(0xFF81C784),
+        Color(0xFFFF8A65),
+        Color(0xFFCE93D8)
     )
     val goals by goalsModel.goals.collectAsState()
     val screenTimeData = screenTimeViewModel.screenTimeData
     val slices = screenTimeData.mapIndexed { index, screenTime ->
-        PieSlice(label = screenTime.app,
-            value = screenTime.time,
-            color = sliceColors[index]) }
+        PieSlice(label = screenTime.app, value = screenTime.time, color = sliceColors[index])
+    }
     val firstThreeGoals = goals.filter { goal -> !goal.isDone }.take(3)
     val today = java.time.LocalDate.now()
     val formatter = DateTimeFormatter.ofPattern("MMMM d, yyyy")
@@ -169,53 +164,58 @@ fun IndexScreen(navController: NavController, goalsModel: GoalsViewModel, screen
                 screenTimeViewModel.checkPermission(context)
                 if (screenTimeViewModel.hasPermission) {
                     screenTimeViewModel.getTopAppsUsage()
+                    screenTimeViewModel.checkAndNotify(context)
                 }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
-        }
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    Column(modifier = Modifier
-        .safeDrawingPadding()
-        .fillMaxWidth()) {
-        Text(text = formattedDate,
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally),
-            textAlign = TextAlign.Center,
-            fontFamily = FontFamily.Serif)
-        Text(text = "Today's Screentime",
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally),
-            textAlign = TextAlign.Center,
-            fontFamily = FontFamily.Serif)
-        if (slices.isEmpty()) {
+    Column(
+        modifier = Modifier
+            .safeDrawingPadding()
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp)
+    ) {
+        Spacer(Modifier.height(8.dp))
+
+        // Date header
+        Text(
+            text = formattedDate,
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.Gray
+        )
+
+        Spacer(Modifier.height(4.dp))
+
+        // Screen time section header
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
             Text(
-                text = "Tap to grant screen time permission",
-                color = Color.Gray,
-                textAlign = TextAlign.Center,
-                fontFamily = FontFamily.Serif,
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .clickable { navController.navigate("screentime") {
-                        popUpTo(navController.graph.findStartDestination().id) {
-                            saveState = true
-                        }
-                        launchSingleTop = true
-                        restoreState = true
-                    }}
+                text = "Today's Screen Time",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f)
             )
-        } else {
-            PieChart(
-                slices = slices,
+            if (slices.isNotEmpty()) {
+                Text(
+                    text = formatDuration(screenTimeData.sumOf { it.time }),
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color(0xFF4FC3F7)
+                )
+            }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        // Pie chart or permission prompt
+        if (slices.isEmpty()) {
+            Box(
                 modifier = Modifier
-                    .size(200.dp)
-                    .align(Alignment.CenterHorizontally)
-                    .padding(16.dp)
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp)
                     .clickable {
                         navController.navigate("screentime") {
                             popUpTo(navController.graph.findStartDestination().id) {
@@ -223,14 +223,81 @@ fun IndexScreen(navController: NavController, goalsModel: GoalsViewModel, screen
                             }
                             launchSingleTop = true
                             restoreState = true
-                        } }
-            )
-            PieChartLegend(slices = slices)
+                        }
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Tap to grant screen time permission",
+                    color = Color.Gray,
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        } else {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                PieChart(
+                    slices = slices,
+                    modifier = Modifier
+                        .size(160.dp)
+                        .clickable {
+                            navController.navigate("screentime") {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
+                )
+                Spacer(Modifier.width(16.dp))
+
+                Column {
+                    slices.forEach { slice ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(vertical = 4.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .background(slice.color)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = slice.label,
+                                    style = MaterialTheme.typography.bodySmall
+                                )
+                                Text(
+                                    text = formatDuration(slice.value),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
-        Row(verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)){
-            Text(text = "Your Goals")
+
+        Spacer(Modifier.height(16.dp))
+        HorizontalDivider()
+        Spacer(Modifier.height(12.dp))
+
+        // Goals section
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Your Goals",
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.weight(1f)
+            )
             IconButton(onClick = {
                 navController.navigate("goals") {
                     popUpTo(navController.graph.findStartDestination().id) {
@@ -246,30 +313,36 @@ fun IndexScreen(navController: NavController, goalsModel: GoalsViewModel, screen
                 )
             }
         }
+
+        Spacer(Modifier.height(8.dp))
+
         if (firstThreeGoals.isEmpty()) {
-            Text(text = "No goals yet — add one!",
+            Text(
+                text = "No goals yet — tap + to add one",
                 color = Color.Gray,
-                textAlign = TextAlign.Center,
-                fontFamily = FontFamily.Serif,
-                modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .fillMaxWidth()
-                    .padding(40.dp))
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(vertical = 16.dp)
+            )
         } else {
             LazyColumn {
                 items(firstThreeGoals) { goal ->
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = goal.goal,
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(16.dp)
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                navController.navigate("goal_info/${goal.id}")
+                            }
+                            .padding(vertical = 4.dp)
+                    ) {
                         Checkbox(
                             checked = goal.isDone,
-                            onCheckedChange = {
-                                goalsModel.toggleDone(goal.id)
-                            }
+                            onCheckedChange = { goalsModel.toggleDone(goal.id) }
+                        )
+                        Text(
+                            text = goal.goal,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.weight(1f)
                         )
                     }
                     HorizontalDivider()

@@ -26,6 +26,10 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.fqrproject.fqr.ui.blocking.AppBlockingScreen
+import com.fqrproject.fqr.ui.blocking.BlockingRepository
+import com.fqrproject.fqr.ui.blocking.BlockingViewModel
+import com.fqrproject.fqr.ui.blocking.BlockingViewModelFactory
 import com.fqrproject.fqr.ui.fitness.FitnessScreen
 import com.fqrproject.fqr.ui.fitness.FitnessSummary
 import com.fqrproject.fqr.ui.fitness.LogWorkoutScreen
@@ -37,8 +41,10 @@ import com.fqrproject.fqr.ui.goals.GoalsScreen
 import com.fqrproject.fqr.ui.goals.GoalsViewModel
 import com.fqrproject.fqr.ui.goals.GoalsViewModelFactory
 import com.fqrproject.fqr.ui.index.IndexScreen
+import com.fqrproject.fqr.ui.screentime.ScreenTimeRepository
 import com.fqrproject.fqr.ui.screentime.ScreenTimeScreen
 import com.fqrproject.fqr.ui.screentime.ScreenTimeViewModel
+import com.fqrproject.fqr.ui.screentime.ScreenTimeViewModelFactory
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
@@ -49,9 +55,15 @@ fun AppNavHost() {
     val app =  LocalContext.current.applicationContext
     val repo = GoalsRepository(LocalContext.current)
     val viewModel: GoalsViewModel = viewModel(factory = GoalsViewModelFactory(app as Application, repo))
-    val screenModel: ScreenTimeViewModel = viewModel()
+    val screenTimeRepo = ScreenTimeRepository(LocalContext.current)
+    val screenModel: ScreenTimeViewModel = viewModel(
+        factory = ScreenTimeViewModelFactory(app, screenTimeRepo)
+    )
     val stepViewModel: StepViewModel = viewModel()
-
+    val blockingRepo = BlockingRepository(LocalContext.current)
+    val blockingModel: BlockingViewModel = viewModel(
+        factory = BlockingViewModelFactory(app as Application, blockingRepo)
+    )
 
     Scaffold(
         bottomBar = {
@@ -124,6 +136,9 @@ fun AppNavHost() {
             composable("screentime") { ScreenTimeScreen(navController, screenModel) }
             composable("goals") { GoalsScreen(navController, viewModel) }
             composable ("fitness") { FitnessScreen(navController, stepViewModel) }
+            composable("app_blocking") {
+                AppBlockingScreen(navController, blockingModel, screenModel)
+            }
 
             // for individual goal detail
             composable(

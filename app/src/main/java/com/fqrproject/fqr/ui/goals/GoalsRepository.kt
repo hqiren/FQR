@@ -1,7 +1,6 @@
 package com.fqrproject.fqr.ui.goals
 
 import android.content.Context
-import androidx.datastore.dataStore
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -9,8 +8,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import kotlinx.serialization.json.encodeToJsonElement
-import kotlinx.serialization.json.encodeToStream
 
 private val Context.dataStore by preferencesDataStore(name = "goals_prefs")
 private val GOALS_KEY = stringPreferencesKey("goals_json")

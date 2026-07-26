@@ -1,9 +1,14 @@
 package com.fqrproject.fqr
 
 import android.Manifest
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -21,6 +26,9 @@ class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        createNotificationChannel(this)
+
         setContent {
             FQRTheme {
                 val context = LocalContext.current
@@ -34,6 +42,10 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
+                val notifLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission()
+                ) { /* granted or not, nothing special to do */ }
+
                 LaunchedEffect(Unit) {
                     val hasPermission = ContextCompat.checkSelfPermission(
                         context,
@@ -44,6 +56,26 @@ class MainActivity : ComponentActivity() {
                         stepViewModel.startListening()
                     } else {
                         launcher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+                    }
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                        val hasNotifPermission = ContextCompat.checkSelfPermission(
+                            context,
+                            Manifest.permission.POST_NOTIFICATIONS
+                        ) == PackageManager.PERMISSION_GRANTED
+
+                        if (!hasNotifPermission) {
+                            notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    }
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+                        if (!alarmManager.canScheduleExactAlarms()) {
+                            context.startActivity(
+                                Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM)
+                            )
+                        }
                     }
                 }
 
@@ -56,4 +88,14 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}
+
+fun createNotificationChannel(context: Context) {
+    val channel = NotificationChannel(
+        "screen_time_channel",
+        "Screen Time Alerts",
+        NotificationManager.IMPORTANCE_DEFAULT
+    )
+    val manager = context.getSystemService(NotificationManager::class.java)
+    manager.createNotificationChannel(channel)
 }
