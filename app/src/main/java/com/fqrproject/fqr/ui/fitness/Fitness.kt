@@ -276,13 +276,13 @@ fun QuickActionsSection(navController: NavController, stepViewModel: StepViewMod
                 ActionButton(
                     text = "",
                     icon = Icons.Default.Info,
-                    onClick = { navController.navigate("FitnessSummary") },
+                    onClick = { navController.navigate("fitness_summary") },
                     modifier = Modifier.weight(1f),
                 )
                 ActionButton(
                     text = "",
                     icon = Icons.Default.AddCircleOutline,
-                    onClick = { navController.navigate("LogWorkoutScreen") }, // log new workout manually
+                    onClick = { navController.navigate("log_workout") }, // log new workout manually
                     modifier = Modifier.weight(1f)
                 )
                 ActionButton(
@@ -338,7 +338,7 @@ fun RecentWorkoutSection(navController: NavController) {
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                 )
-                TextButton(onClick = { navController.navigate("AllWorkoutsScreen") }) {
+                TextButton(onClick = { navController.navigate("all_workouts") }) {
                     Text("See All")
                 }
 

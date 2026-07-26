@@ -65,11 +65,22 @@ class AppBlockerService : AccessibilityService() {
         calendar.set(java.util.Calendar.SECOND, 0)
         val start = calendar.timeInMillis
         val end = System.currentTimeMillis()
+        
         val stats = usm.queryUsageStats(
             android.app.usage.UsageStatsManager.INTERVAL_DAILY, start, end
-        )
-        val totalMillis = stats.filter { it.totalTimeInForeground > 60000 }
-            .sumOf { it.totalTimeInForeground }
+        ) ?: emptyList()
+
+        // get list of all apps, and their time in foreground
+        val aggregatedStats = stats.groupBy { it.packageName }
+            .mapValues { entry -> entry.value.maxOf { it.totalTimeInForeground } }
+
+        // filter out this app and the background apps
+        val totalMillis = aggregatedStats.filter { (pg, time) ->
+            time > 60000 && // app need to be more than 1 min to show
+            pg != packageName &&
+            !pg.contains("launcher") &&
+            !pg.contains("systemui")
+        }.values.sum()
 
         return totalMillis > targetMinutes * 60000L
     }

@@ -34,7 +34,6 @@ import com.fqrproject.fqr.ui.fitness.AllWorkoutsScreen
 import com.fqrproject.fqr.ui.fitness.FitnessScreen
 import com.fqrproject.fqr.ui.fitness.FitnessSummary
 import com.fqrproject.fqr.ui.fitness.LogWorkoutScreen
-import com.fqrproject.fqr.ui.fitness.AllWorkoutsScreen
 import com.fqrproject.fqr.ui.fitness.StepViewModel
 import com.fqrproject.fqr.ui.fitness.WorkoutDetailsScreen
 import com.fqrproject.fqr.ui.goals.GoalDetailScreen
@@ -155,30 +154,16 @@ fun AppNavHost() {
                 )
             }
 
-            // within fitness page
-            composable("FitnessScreen") {
-                FitnessScreen(navController = navController, stepViewModel = stepViewModel)
-            }
-
-            composable("AllWorkoutsScreen") {
-                AllWorkoutsScreen(
-                    navController = navController,
-                    onBackClick = { navController.popBackStack() }
-                )
-            }
-
-            composable("FitnessSummary") {
+            composable("fitness_summary") { //fitness sub screen
                 FitnessSummary(onBackClick = { navController.popBackStack() })
             }
 
-            composable("LogWorkoutScreen") {
-                LogWorkoutScreen(
-                    onBackClick = { navController.popBackStack() }
-                )
+            composable("log_workout") {
+                LogWorkoutScreen(onBackClick = { navController.popBackStack() })
             }
 
             composable(
-                route = "WorkoutDetailsScreen/{workoutId}",
+                route = "workout_details/{workoutId}",
                 arguments = listOf(navArgument("workoutId") { type = NavType.IntType })
             ) { backStackEntry ->
                 val workoutId = backStackEntry.arguments?.getInt("workoutId") ?: 0
@@ -188,7 +173,7 @@ fun AppNavHost() {
                 )
             }
 
-            composable("AllWorkoutsScreen") {
+            composable("all_workouts") {
                 AllWorkoutsScreen(
                     navController = navController,
                     onBackClick = { navController.popBackStack() }

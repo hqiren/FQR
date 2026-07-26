@@ -103,6 +103,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@RequiresApi(Build.VERSION_CODES.O)
 fun createNotificationChannel(context: Context) {
     val channel = NotificationChannel(
         "screen_time_channel",
