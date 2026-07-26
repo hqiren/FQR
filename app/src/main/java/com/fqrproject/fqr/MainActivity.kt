@@ -18,9 +18,12 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.fqrproject.fqr.ui.fitness.StepViewModel
+import com.fqrproject.fqr.ui.screentime.ScreenTimeRepository
 import com.fqrproject.fqr.ui.theme.FQRTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.O)
@@ -28,6 +31,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         createNotificationChannel(this)
+
+        lifecycleScope.launch {
+            val repo = ScreenTimeRepository(this@MainActivity)
+            repo.targetMinutes.collect { minutes ->
+                getSharedPreferences("blocking_state", MODE_PRIVATE)
+                    .edit()
+                    .putInt("target_minutes", minutes)
+                    .apply()
+            }
+        }
 
         setContent {
             FQRTheme {
