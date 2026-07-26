@@ -1,10 +1,14 @@
 package com.fqrproject.fqr.ui.goals
 
 import android.app.Application
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -12,19 +16,22 @@ import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DatePicker
+import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -33,7 +40,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.AndroidViewModel
@@ -41,7 +50,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import com.fqrproject.fqr.ui.fitness.HeaderSection
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -54,7 +62,9 @@ import java.util.UUID
 data class Goal(
     val id: String = UUID.randomUUID().toString(),
     val goal: String,
-    val isDone: Boolean = false
+    val isDone: Boolean = false,
+    val dueDate: Long? = null,        // epoch millis, null = no deadline
+    val recurrence: String = "None"   // "None", "Daily", "Weekly"
 )
 
 class GoalsViewModel(
@@ -64,10 +74,14 @@ class GoalsViewModel(
     val goals: StateFlow<List<Goal>> = repo.goals
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    fun addGoal(text: String) {
+    fun addGoal(text: String, dueDate: Long? = null, recurrence: String = "None") {
         viewModelScope.launch {
-            val newList = goals.value + Goal(goal = text)
+            val newGoal = Goal(goal = text, dueDate = dueDate, recurrence = recurrence)
+            val newList = goals.value + newGoal
             repo.saveGoals(newList)
+            if (dueDate != null) {
+                ReminderScheduler.schedule(getApplication(), newGoal)
+            }
         }
     }
 
@@ -84,24 +98,26 @@ class GoalsViewModel(
             repo.saveGoals(newList)
         }
     }
-
-    fun editGoal(id: String, newTask: String){
+    fun editGoal(id: String, newTask: String, dueDate: Long? = null, recurrence: String = "None") {
         viewModelScope.launch {
             val newList = goals.value.map { x ->
-                if (x.id == id) {
-                    val newGoal = x.copy(goal = newTask)
-                    newGoal
-                } else {
-                    x
-                }
+                if (x.id == id) x.copy(goal = newTask, dueDate = dueDate, recurrence = recurrence) else x
             }
             repo.saveGoals(newList)
+            val updated = newList.find { it.id == id }
+            if (updated != null && dueDate != null) {
+                ReminderScheduler.schedule(getApplication(), updated)
+            }
         }
     }
 
     fun deleteGoal(id: String) {
         viewModelScope.launch {
-            val newList = goals.value.filter { screenTime -> screenTime.id != id }
+            val goalToDelete = goals.value.find { it.id == id }
+            if (goalToDelete != null) {
+                ReminderScheduler.cancel(getApplication(), goalToDelete)
+            }
+            val newList = goals.value.filter { it.id != id }
             repo.saveGoals(newList)
         }
     }
@@ -127,37 +143,109 @@ fun GoalDetailScreen(
     val goal = goals.find { it.id == goalId }
 
     var editedText by remember { mutableStateOf(goal?.goal ?: "") }
+    var dueDate by remember { mutableStateOf(goal?.dueDate) }
+    var recurrence by remember { mutableStateOf(goal?.recurrence ?: "None") }
+    var showDatePicker by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxWidth().safeDrawingPadding().padding(16.dp)) {
+    val context = LocalContext.current
+
+    Column(modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { navController.popBackStack() }) {
-                Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
             }
             Text("Edit Goal", style = MaterialTheme.typography.titleLarge)
         }
+
         Spacer(Modifier.height(16.dp))
-        Row(modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = editedText,
-                onValueChange = { text ->
-                    editedText = text
-                },
-                modifier = Modifier
-                    .weight(1f)
+
+        OutlinedTextField(
+            value = editedText,
+            onValueChange = { editedText = it },
+            label = { Text("Goal") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(Modifier.height(16.dp))
+
+        // Due date
+        Text("Due Date", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+        Spacer(Modifier.height(4.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = dueDate?.let {
+                    java.time.Instant.ofEpochMilli(it)
+                        .atZone(java.time.ZoneId.systemDefault())
+                        .toLocalDate()
+                        .format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy"))
+                } ?: "No deadline set",
+                modifier = Modifier.weight(1f)
             )
-            Spacer(modifier = Modifier.width(16.dp))
-            Button(onClick = {
+            Button(onClick = { showDatePicker = true }) {
+                Text(if (dueDate == null) "Set Date" else "Change")
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+
+        // Recurrence
+        Text("Repeat", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+        Spacer(Modifier.height(4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("None", "Daily", "Weekly").forEach { option ->
+                val selected = recurrence == option
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(if (selected) Color(0xFF4FC3F7) else Color(0xFF2A3A40))
+                        .clickable { recurrence = option }
+                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        option,
+                        color = if (selected) Color.Black else Color.Gray,
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(24.dp))
+
+        Button(
+            onClick = {
                 if (editedText.isNotBlank()) {
-                    goal?.let { goalsModel.editGoal(it.id, editedText) }
+                    goal?.let {
+                        goalsModel.editGoal(it.id, editedText, dueDate, recurrence)
+                    }
                     navController.popBackStack()
                 }
-            }) {
-                Text(text = "Save")
+            },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Save")
+        }
+    }
+
+    // Date picker dialog
+    if (showDatePicker) {
+        val datePickerState = rememberDatePickerState()
+        DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    dueDate = datePickerState.selectedDateMillis
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
             }
+        ) {
+            DatePicker(state = datePickerState)
         }
     }
 }
-
 @Composable
 fun GoalsScreen(navController: NavController, goalsModel: GoalsViewModel) {
     val goals by goalsModel.goals.collectAsState()
@@ -166,22 +254,23 @@ fun GoalsScreen(navController: NavController, goalsModel: GoalsViewModel) {
     }
 
     Column(modifier = Modifier
-        .fillMaxWidth()
         .safeDrawingPadding()
+        .fillMaxSize()
     ){
         Row(modifier = Modifier
             .padding(16.dp)
         ) {
             HeaderSection("Goals")
         }
-        Row(modifier = Modifier.fillMaxWidth()) {
+
+        // Add goal button with input
+        Row(modifier = Modifier.fillMaxWidth()
+            .padding(horizontal = 8.dp)) {
             OutlinedTextField(
                 value = input,
-                onValueChange = { text ->
-                    input = text
-                },
-                modifier = Modifier
-                    .weight(1f)
+                onValueChange = { text -> input = text },
+                placeholder = { Text("Add a new goal...") },
+                modifier = Modifier.weight(1f)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Button(onClick = {
@@ -189,25 +278,45 @@ fun GoalsScreen(navController: NavController, goalsModel: GoalsViewModel) {
                     goalsModel.addGoal(input)
                     input = ""
                 }
-            }) {
+            }, modifier = Modifier.padding(vertical = 2.dp)) {
                 Text(text = "Add")
             }
         }
 
+        // Shows number of goals + how many are completed
+        Text(
+            text = "${goals.size} goals · ${goals.count { it.isDone }} completed",
+            style = MaterialTheme.typography.labelMedium,
+            color = Color.Gray,
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
+        )
+
+        // List showing the goals to complete, with due date
         LazyColumn {
             items(goals) { goal ->
                 Row(verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clickable {
                             navController.navigate("goal_info/${goal.id}") }) {
-                Text(
-                    text = goal.goal,
-                    textDecoration = if (goal.isDone) TextDecoration.LineThrough else TextDecoration.None,
-                    color = if (goal.isDone) Color.Gray else Color.Unspecified,
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(16.dp)
-                )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = goal.goal,
+                            textDecoration = if (goal.isDone) TextDecoration.LineThrough else TextDecoration.None,
+                            color = if (goal.isDone) Color.Gray else Color.Unspecified,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                        goal.dueDate?.let { due ->
+                            Text(
+                                text = "Due: " + java.time.Instant.ofEpochMilli(due)
+                                    .atZone(java.time.ZoneId.systemDefault())
+                                    .toLocalDate()
+                                    .format(java.time.format.DateTimeFormatter.ofPattern("MMM d")),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFFFFB74D),
+                                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                            )
+                        }
+                    }
                 Checkbox(
                     checked = goal.isDone,
                     onCheckedChange = {
