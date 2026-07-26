@@ -41,8 +41,9 @@ class AppBlockerService : AccessibilityService() {
         } catch (e: Exception) {
             emptyList()
         }
+        val over = isOverTarget()
 
-        if (isEnabled && blockedApps.contains(packageName)) {
+        if (isEnabled && blockedApps.contains(packageName) && over) {
             if (blockedPackage != packageName) {
                 blockedPackage = packageName
                 showOverlay()
@@ -51,6 +52,26 @@ class AppBlockerService : AccessibilityService() {
             blockedPackage = null
             removeOverlay()
         }
+    }
+
+    private fun isOverTarget(): Boolean {
+        val prefs = getSharedPreferences("blocking_state", MODE_PRIVATE)
+        val targetMinutes = prefs.getInt("target_minutes", 120)
+
+        val usm = getSystemService(USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
+        val calendar = java.util.Calendar.getInstance()
+        calendar.set(java.util.Calendar.HOUR_OF_DAY, 0)
+        calendar.set(java.util.Calendar.MINUTE, 0)
+        calendar.set(java.util.Calendar.SECOND, 0)
+        val start = calendar.timeInMillis
+        val end = System.currentTimeMillis()
+        val stats = usm.queryUsageStats(
+            android.app.usage.UsageStatsManager.INTERVAL_DAILY, start, end
+        )
+        val totalMillis = stats.filter { it.totalTimeInForeground > 60000 }
+            .sumOf { it.totalTimeInForeground }
+
+        return totalMillis > targetMinutes * 60000L
     }
 
     private fun showOverlay() {

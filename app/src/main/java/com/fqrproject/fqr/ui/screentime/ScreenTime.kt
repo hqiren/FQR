@@ -117,6 +117,11 @@ class ScreenTimeViewModel(
     fun setTarget(minutes: Int) {
         viewModelScope.launch {
             repo.setTargetMinutes(minutes)
+            getApplication<Application>()
+                .getSharedPreferences("blocking_state", Context.MODE_PRIVATE)
+                .edit()
+                .putInt("target_minutes", minutes)
+                .apply()
         }
     }
 
