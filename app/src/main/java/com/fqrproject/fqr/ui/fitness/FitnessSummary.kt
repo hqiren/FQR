@@ -1,5 +1,7 @@
 package com.fqrproject.fqr.ui.fitness
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.runtime.Composable
 import androidx.compose.foundation.layout.*
@@ -22,7 +24,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.flow.first
+import java.time.LocalDateTime
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun FitnessSummary(onBackClick: () -> Unit) {
     LazyColumn(
@@ -85,8 +90,52 @@ fun FitnessSummary(onBackClick: () -> Unit) {
 }
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun RecommendationSection() {
+    // based on healthhub recommendation of 2 days strength and 150-300 min cardio per week
+    val context = LocalContext.current
+    var recommendationTxt by remember { mutableStateOf("Analyzing your activity...") }
+
+    LaunchedEffect(Unit) {
+        val allWorkouts = Workout.getAll(context).first()
+        val now = LocalDateTime.now()
+        val sevenDaysAgo = now.minusDays(7)
+
+        // get last 7 days workouts
+        val lastWeekWorkouts = allWorkouts.filter { 
+            it.date != null && it.date.isAfter(sevenDaysAgo) 
+        }
+
+        // get cardio minutes
+        val cardioMinutes = lastWeekWorkouts
+            .filter { it.type == "cardio" }
+            .sumOf { it.duration }
+
+        // get strength sessions
+        val strengthSessions = lastWeekWorkouts
+            .count { it.type == "strength" }
+
+        val cardioRemaining = 200 - cardioMinutes // remaining to check or suggest to user
+        val strengthRemaining = 2 - strengthSessions
+        
+        // use 7 day window
+        var recs = ""
+        if (cardioRemaining > 0) {
+            recs += "Aim for $cardioRemaining minutes more cardio\n"
+        }
+        if (strengthRemaining > 0) {
+            val unit = if (strengthRemaining == 1) "session" else "sessions"
+            recs += "Aim for $strengthRemaining more strength training $unit\n"
+        }
+
+        if (recs == "") { // goal completed
+            recommendationTxt = "Good job! Your workouts are aligned with HealthHub's recommendations.\n"
+        } else {
+            recommendationTxt = recs
+        }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
@@ -100,23 +149,10 @@ fun RecommendationSection() {
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.SemiBold
             )
-            Spacer(modifier = Modifier.height(20.dp)) // formatting
-
-            val context = LocalContext.current
-
-            // fave workout type
-            var woType: String? by remember { mutableStateOf("NIL") }
-            LaunchedEffect(Unit) {
-                woType = Workout.getFavouriteType(context)
-            }
-
-            val recommendationTxt = when (woType) { // algo to decide recommendation
-                "strength" -> "More Cardio Sessions"
-                else -> "More Strength Training"
-            }
+            Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "\n" + recommendationTxt + "\n\n", // formatting
+                text = recommendationTxt,
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.fillMaxWidth(),
                 textAlign = TextAlign.Center

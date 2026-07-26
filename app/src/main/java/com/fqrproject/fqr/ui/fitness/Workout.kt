@@ -48,9 +48,20 @@ data class Workout(
             return getDao(context).getAllWorkouts().map { it.take(3) }
         }
 
+        // get all workouts
+        fun getAll(context: Context): Flow<List<Workout>> {
+            return getDao(context).getAllWorkouts()
+        }
+
+
         // insert workout
         suspend fun insert(context: Context, workout: Workout) {
             getDao(context).insertWorkout(workout)
+        }
+
+        // update workout
+        suspend fun update(context: Context, workout: Workout) {
+            getDao(context).updateWorkout(workout)
         }
 
         // get by id
@@ -76,5 +87,8 @@ data class Workout(
             return allWorkouts.map { it.duration }.average()
         }
 
+        suspend fun delete(context: Context, workout: Workout) {
+            getDao(context).deleteWorkout(workout)
+        }
     }
 }
