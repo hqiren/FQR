@@ -41,7 +41,7 @@ fun FitnessScreen(navController: NavController, stepViewModel: StepViewModel) {
             HeaderSection("Fitness")
         }
 
-        // stats
+        // stats (step count, est calories and est distance)
         item {
             val context = LocalContext.current
             val stepCount by remember(context) {
@@ -62,7 +62,7 @@ fun FitnessScreen(navController: NavController, stepViewModel: StepViewModel) {
             StatsRow(listOf(s1, s2, s3))
         }
 
-        // daily progress
+        // daily progress ( for calories and the steps daily)
         item {
             val context = LocalContext.current
             val stepCount by remember(context) {
@@ -72,7 +72,7 @@ fun FitnessScreen(navController: NavController, stepViewModel: StepViewModel) {
             ProgressSection(stepCount = stepCount)
         }
 
-        // quick actions
+        // quick actions (for the summary, log new workout and sync steps)
         item {
             QuickActionsSection(navController, stepViewModel)
         }
@@ -198,7 +198,7 @@ fun ProgressSection(stepCount: Int) { // for daily goal progress
             ProgressItem(
                 label = "Steps",
                 current = stepCount,
-                goal = 10000, // can change aft goal settle
+                goal = 10000,
                 color = Color(0xFF4CAF50)
             )
 
@@ -208,7 +208,7 @@ fun ProgressSection(stepCount: Int) { // for daily goal progress
             ProgressItem(
                 label = "Calories",
                 current = stepsToCalories(stepCount),
-                goal = 800, // to be sorted after goal settled
+                goal = 800,
                 color = Color(0xFFFF5722)
             )
         }
