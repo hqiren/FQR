@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
@@ -249,9 +250,18 @@ fun GoalDetailScreen(
 @Composable
 fun GoalsScreen(navController: NavController, goalsModel: GoalsViewModel) {
     val goals by goalsModel.goals.collectAsState()
+    var goalToDelete by remember {
+        mutableStateOf<Goal?>(null)
+    }
     var input by remember {
         mutableStateOf("")
     }
+    var showGoalDetails by remember {
+        mutableStateOf(false)
+    }
+    var dueDate by remember { mutableStateOf<Long?>(null) }
+    var recurrence by remember { mutableStateOf("None") }
+    var showDatePicker by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier
         .safeDrawingPadding()
@@ -264,23 +274,11 @@ fun GoalsScreen(navController: NavController, goalsModel: GoalsViewModel) {
         }
 
         // Add goal button with input
-        Row(modifier = Modifier.fillMaxWidth()
-            .padding(horizontal = 8.dp)) {
-            OutlinedTextField(
-                value = input,
-                onValueChange = { text -> input = text },
-                placeholder = { Text("Add a new goal...") },
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(16.dp))
-            Button(onClick = {
-                if (input.isNotBlank()) {
-                    goalsModel.addGoal(input)
-                    input = ""
-                }
-            }, modifier = Modifier.padding(vertical = 2.dp)) {
-                Text(text = "Add")
-            }
+        Button(
+            onClick = { showGoalDetails = true },
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+        ) {
+            Text("+ Add Goal")
         }
 
         // Shows number of goals + how many are completed
@@ -291,9 +289,13 @@ fun GoalsScreen(navController: NavController, goalsModel: GoalsViewModel) {
             modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
         )
 
-        // List showing the goals to complete, with due date
+        // List showing the goals to complete, with due date (sorted)
+        val sortedGoals = goals.sortedWith(
+            compareBy({ it.isDone }, { it.dueDate == null }, { it.dueDate })
+        )
+
         LazyColumn {
-            items(goals) { goal ->
+            items(sortedGoals) { goal ->
                 Row(verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .clickable {
@@ -323,8 +325,9 @@ fun GoalsScreen(navController: NavController, goalsModel: GoalsViewModel) {
                         goalsModel.toggleDone(goal.id)
                     }
                 )
+                    // Delete goal button
                     IconButton(onClick = {
-                        goalsModel.deleteGoal(goal.id)
+                        goalToDelete = goal
                     }) {
                         Icon(
                             imageVector = Icons.Default.Delete,
@@ -333,6 +336,120 @@ fun GoalsScreen(navController: NavController, goalsModel: GoalsViewModel) {
                     }
                 }
                 HorizontalDivider()
+            }
+        }
+
+        // Confirmation dialog for deletion of goals
+        if (goalToDelete != null) {
+            AlertDialog(
+                onDismissRequest = { goalToDelete = null },
+                title = { Text("Delete goal") },
+                text = { Text("Would you like to delete this goal?") },
+                confirmButton = { TextButton(onClick = {
+                    goalToDelete?.let { goal ->
+                        goalsModel.deleteGoal(goal.id)
+                    } // Safeguards that goalToDelete is not null
+                    goalToDelete = null
+                }) { Text("Delete") } },
+                dismissButton = { TextButton(onClick = {
+                    goalToDelete = null
+                }) { Text("Cancel") } }
+            )
+        }
+
+        // Add goals details log for adding of goals
+        if (showGoalDetails) {
+            AlertDialog(
+                onDismissRequest = { showGoalDetails = false },
+                title = { Text("Add goal details") },
+                text = {
+                    // Column for date picker and recurrence
+                    Column(modifier = Modifier.fillMaxSize().safeDrawingPadding().padding(16.dp)) {
+                        // Text field to add goal name
+                        OutlinedTextField(
+                            value = input,
+                            onValueChange = { text -> input = text },
+                            placeholder = { Text("Add a new goal...") },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Due date
+                        Text("Due Date", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                        Spacer(Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = dueDate?.let {
+                                    java.time.Instant.ofEpochMilli(it)
+                                        .atZone(java.time.ZoneId.systemDefault())
+                                        .toLocalDate()
+                                        .format(java.time.format.DateTimeFormatter.ofPattern("MMM d, yyyy"))
+                                } ?: "No deadline set",
+                                modifier = Modifier.weight(1f)
+                            )
+                            Button(onClick = { showDatePicker = true }) {
+                                Text(if (dueDate == null) "Set Date" else "Change")
+                            }
+                        }
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Recurrence
+                        Text("Repeat", style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+                        Spacer(Modifier.height(4.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf("None", "Daily", "Weekly").forEach { option ->
+                                val selected = recurrence == option
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .background(if (selected) Color(0xFF4FC3F7) else Color(0xFF2A3A40))
+                                        .clickable { recurrence = option }
+                                        .padding(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        option,
+                                        color = if (selected) Color.Black else Color.Gray,
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = { TextButton(onClick = {
+                    if (input != "") {
+                        goalsModel.addGoal(text=input, dueDate=dueDate, recurrence=recurrence)
+                        input = ""
+                        dueDate = null
+                        recurrence = ""
+                        showGoalDetails = false
+                    }
+                }) { Text("Add Goal") } },
+                dismissButton = { TextButton(onClick = {
+                    showGoalDetails = false
+                }) { Text("Cancel") } }
+            )
+        }
+
+        // Show date picker
+        if (showDatePicker) {
+            val datePickerState = rememberDatePickerState()
+            DatePickerDialog(
+                onDismissRequest = { showDatePicker = false },
+                confirmButton = {
+                    TextButton(onClick = {
+                        dueDate = datePickerState.selectedDateMillis
+                        showDatePicker = false
+                    }) { Text("OK") }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDatePicker = false }) { Text("Cancel") }
+                }
+            ) {
+                DatePicker(state = datePickerState)
             }
         }
     }
