@@ -426,13 +426,13 @@ data class StatData (
 
 
 fun stepsToDistance(steps: Int): Double {
-    // avg stride 1.4 m
+    // avg stride 1.4 m based on google
     val distanceInMeters = steps * 1.4
     val distanceInKm = distanceInMeters / 1000
     return distanceInKm
 }
 
 fun stepsToCalories(steps: Int): Int {
-    // avg 0.045 cal per step
+    // avg 0.045 cal per step based on google
     return (steps * 0.045).toInt()
 }

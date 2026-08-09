@@ -33,6 +33,7 @@ fun LogWorkoutScreen(
     onBackClick: () -> Unit,
     workoutToEdit: Workout? = null // null means logging new workout
 ) {
+    // this page  is also used for editing of workout
     // rmb state of fields, init with workout details if editing
     var workoutName by remember { mutableStateOf(workoutToEdit?.name ?: "") }
     var workoutType by remember { mutableStateOf(workoutToEdit?.type ?: "cardio") }

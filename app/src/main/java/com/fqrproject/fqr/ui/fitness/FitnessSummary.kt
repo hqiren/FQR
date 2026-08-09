@@ -107,12 +107,12 @@ fun RecommendationSection() {
             it.date != null && it.date.isAfter(sevenDaysAgo) 
         }
 
-        // get cardio minutes
+        // get cardio minutes from last 7 days
         val cardioMinutes = lastWeekWorkouts
             .filter { it.type == "cardio" }
             .sumOf { it.duration }
 
-        // get strength sessions
+        // get strength sessions from last 7 days
         val strengthSessions = lastWeekWorkouts
             .count { it.type == "strength" }
 
@@ -120,6 +120,8 @@ fun RecommendationSection() {
         val strengthRemaining = 2 - strengthSessions
         
         // use 7 day window
+        // if the user meets requirement in last 7 days, will print good job message
+        // else will prompt recommendation to user
         var recs = ""
         if (cardioRemaining > 0) {
             recs += "Aim for $cardioRemaining minutes more cardio\n"
